@@ -4,8 +4,8 @@ The project aims at developing a ROS-based structure to interact with both Indus
 
 If you use this code for your research or find it useful, please cite it:
 
-# Maintainers
-Cristina Nuzzi, [Krissy93](https://github.com/Krissy93)
+## Maintainers
+- Cristina Nuzzi, [Krissy93](https://github.com/Krissy93)
 
 ## Table of Contents
 - [Installation instructions](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Installation.md)
