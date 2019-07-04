@@ -16,7 +16,7 @@ If you use this code for your research or find it useful, please cite it:
 If you want to contribute adding custom modules and functionalities to the software, feel free to do so! Contact us if you need help or want to work with us by sending an e-mail to [Cristina Nuzzi](mailto:c.nuzzi@unibs.it).
 
 ## "To do" list
-- Safety module: 
+- **Safety module:** 
     - reads environmental data from a 3D camera such as Kinect or RealSense
     - detects human presence and computes a safety hit-box around it
     - always knows robot safety hit-box
