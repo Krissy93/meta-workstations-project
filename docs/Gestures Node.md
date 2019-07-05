@@ -25,7 +25,7 @@ We filter out predictions with confidence score **lower than 80%** as a safety m
 We defined a set of single-hand gestures as represented in the figure.
 
 <p align="center">
-  <img src="images/hands.png">
+  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/hands.png">
 </p>
 
 Since every gesture can be performed with the right or the left hand, and some gestures get confused with each other by the detector, we developed a "command code" to improve the performances.
