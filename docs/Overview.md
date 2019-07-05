@@ -2,13 +2,17 @@
 The system is composed of several nodes that perform some core functionality. The nodes talk with each other by sending messages on specific topics.
 At the present time, the developed structure is detailed in Fig. 1.
 
-![Fig. 1](images/Fig1.png)
+<p align="center">
+  <img height="250" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/Fig1.png">
+</p>
 
 ## State Machine Node
 The main node is the **State Machine Node**, which contains the definition of the basic state machine used to command the robot.
 For now, a set of simple functionalities (Fig. 2) has been developed but new robot functionalities can be easily added to the state machine by adding a new State to the `state_machine.py` core file.
 
-![Fig. 2](images/Fig2.png)
+<p align="center">
+  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/Fig2.png">
+</p>
 
 Detailed information on the functionalities can be found in the corresponding file of the list:
 - Home State
