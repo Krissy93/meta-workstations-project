@@ -1,0 +1,19 @@
+<launch>
+
+  <node pkg="state_machine_package"
+        type="state_machine.py"
+        name="state_machine_node"
+        respawn="false"
+        output="screen"
+        required="true">
+  </node>
+
+  <node pkg="smach_viewer"
+        type="smach_viewer.py"
+        name="state_machine_viewer_node"
+        respawn="false"
+        output="log"
+        required="false">
+  </node>
+
+</launch>
