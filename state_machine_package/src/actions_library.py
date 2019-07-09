@@ -3,6 +3,8 @@
 import rospy
 from robot import *
 from utils import *
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from sensor_msgs.msg import JointState
 
 def action_list():
     """ Prints all the available actions present in this file. """
@@ -22,7 +24,7 @@ def init_points():
     to the robot-dependant inverse kinematic function. This function is defined in robot.py """
 
     # loads the points file
-    file = load_txt('/home/optolab/smach_ws/src/state_machine_package/data/SPoints.txt')
+    file = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/SPoints.txt')
     names, points = load_points(file)
     # checks for duplicates. Just a safety measure
     names, points = checkifduplicates(names, points)
@@ -31,7 +33,7 @@ def init_points():
     Q = elaborateKinMulti(points)
     # writes them in the corresponding file. It is not an append but a complete rewriting of the contents
     QQ = zip(names, Q)
-    QPoints = write_txt('/home/optolab/smach_ws/src/state_machine_package/data/QPoints.txt', QQ)
+    QPoints = write_txt('/home/ros/catkin_ws/src/state_machine_package/data/QPoints.txt', QQ)
     # debug
     rospy.loginfo(color.BOLD + color.PURPLE + '-- JOINTS COORDINATES RECALCULATED!--' + color.END)
     for i in range(0,len(points)):
@@ -39,7 +41,7 @@ def init_points():
     return QPoints
 
 
-def init_trajectory(trajectory):
+def init_trajectory(trajectory, empty):
     """ The trajectory message is initialized here when first called.
     The joints must be changed every time a new robot is connected to the system,
     according to how many joints it has. TO DO: loads this info from userdata given at launch? """
@@ -49,12 +51,20 @@ def init_trajectory(trajectory):
     trajectory.header.stamp.nsecs = 0
     trajectory.header.frame_id = 'robot_trajectory'
     trajectory.joint_names = ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6']
+    #write_trajectory(trajectory, empty, empty, empty, empty)
+    print(trajectory)
 
 def write_trajectory(trajectory, positions, velocities, accelerations, effort):
     """ Method to create a JointTrajectory message ready to be sent to the driver node.
     The sequence number and time stamp are calculated based on what was the previous message sent.
     Each value of positions, velocity and so on refers to a specific joint in the same list position.
     Note that positions etc must be given to the function as lists: [[0,0,0,0,0,0], [1,1,1,1,1,1], ...] """
+    
+    positions = [positions]
+    velocities = [velocities]
+    accelerations = [accelerations]
+    effort = [effort]
+    trajectory.points = []
 
     for i in range(0,len(positions)):
         points = JointTrajectoryPoint()
@@ -64,6 +74,7 @@ def write_trajectory(trajectory, positions, velocities, accelerations, effort):
         points.effort = effort[i]
 
         trajectory.points.append(points)
+    print(trajectory)
 
 def send_trajectory(trajectory, pub):
     """ Method to send the trajectory with the current time in the timestamp. """

@@ -38,7 +38,8 @@ def write_txt(filename, data):
                 file.write(str(data[i][j]) + '\n')
             else:
                 file.write(str(data[i][j]) + ' ')
-        q = [round(float(item),2) for item in data[i]]
+        #q = [round(float(item),2) for item in data[i]]
+        q = [item for item in data[i]]
         QQ.append(q)
     file.close()
     return QQ

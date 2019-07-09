@@ -12,6 +12,7 @@ from sensor_msgs.msg import JointState
 import threading
 import traceback
 from utils import *
+from actions_library import *
 
 ########### STATE MACHINE BASIC CLASSES DEFINITION ###########
 
@@ -38,7 +39,7 @@ class State(smach.State):
         self.sub = 0
         self.trajsub = 0
         self.pub = rospy.Publisher('/command_request', commandRequest, queue_size = 1)
-        self.trajpub = rospy.Publisher('/trajectory_topic', JointTrajectory, queue_size = 1, latch=True)
+        self.trajpub = rospy.Publisher('/joint_path_command', JointTrajectory, queue_size = 1, latch=True)
         self.request = commandRequest()
         self.trajectory = JointTrajectory()
         # basic empty vector useful for initialization of velocities accelerations and effort
@@ -83,7 +84,9 @@ class State(smach.State):
         # between the theoretical position +- 0.01 radiants. This is a safety measure
         # because it is nearly impossible to reach the theoretical position requested
         # so an approximation is needed
-        if (msg.position <= self.trajectory.positions - 0.01) and (msg.position >= self.trajectory.positions + 0.01):
+        #if (msg.position <= self.trajectory.positions - 0.01) and (msg.position >= self.trajectory.positions + 0.01):
+        #print(self.trajectory.points[0].positions)
+        if (msg.position[0] == 888) and (msg.position[1] >= self.trajectory.points[0].positions[1] - 0.01) and (msg.position[1] <= self.trajectory.points[0].positions[1] + 0.01):
             # if the two positions are almost equal, it means that the robot
             # has reached the goal of the last message. Sets the goal to true
             self.goal = True
@@ -592,7 +595,7 @@ class PointsDef(State):
         # it uses a bunch of functions imported from utils.
         rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING XYZ POINTS FILE --' + color.END)
         # launches the gedit terminal command to open the file. It is statically defined here
-        return_code = subprocess.call("gedit /home/optolab/smach_ws/src/state_machine_package/data/SPoints.txt", shell=True)
+        return_code = subprocess.call("gedit /home/ros/catkin_ws/src/state_machine_package/data/SPoints.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE! --' + color.END)
         # after modifiying, it loads the contents of the file into memory. S points are in XYZ coordinates
         QQ = init_points()
@@ -717,7 +720,7 @@ class LoopTrajectory(State):
 
         rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING TRAJECTORY FILE --' + color.END)
         # launches the gedit terminal command to open the file. It is statically defined here
-        return_code = subprocess.call("gedit /home/optolab/smach_ws/src/state_machine_package/data/SPoints.txt", shell=True)
+        return_code = subprocess.call("gedit /home/ros/catkin_ws/src/state_machine_package/data/SPoints.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE! --' + color.END)
         ########################## EDIT RICHIESTO QUI
         # returns home automatically after these operations are concluded.
@@ -747,7 +750,7 @@ class LoopRun(InstructionState):
         self.request.request_number = userdata.input
 
         # loads the operations file. The file contains the names of the operations in the first column, and the paths in the second column
-        operationfile = load_txt('/home/optolab/smach_ws/src/state_machine_package/data/Operations.txt')
+        operationfile = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/Operations.txt')
         rospy.loginfo(color.BOLD + color.CYAN + 'CHOOSE EXISTING OPERATION FROM LIST:' + color.END)
         # prints the available operations from the file, so that the user can select one. The corresponding operation
         # is then loaded from its personal file which contains every detail of the execution
@@ -832,7 +835,7 @@ class LoopRun(InstructionState):
                                     # if it reads a "go" asks for a confirm
                                     self.confirmInstruction('[GO]')
                                     # exits the while loop only if after this call command is == 0, otherwhise it keeps waiting
-                                    if self.command not 0:
+                                    if self.command != 0:
                                         rospy.loginfo(color.BOLD + color.RED + '-- NOT CONFIRMED, STILL PAUSED --' + color.END)
                                     else:
                                         break
@@ -900,9 +903,11 @@ class PickPlace(InstructionState):
     def select_point_from_list(self):
         # resets variables
         self.reset()
+        P = None
         # loads the points file in joints coordinates
-        file = load_txt('/home/optolab/smach_ws/src/state_machine_package/data/QPoints.txt')
+        file = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/QPoints.txt')
         names, points = load_points(file)
+        rospy.loginfo(color.BOLD + color.PURPLE + '-- SELECT POINT FROM LIST --' + color.END)
         for i in range(0,len(names)):
             rospy.loginfo(color.BOLD + color.YELLOW + '| POINT ' + str(names[i]) + ': ' + str(points[i]) + ' |' + color.END)
 
@@ -916,8 +921,8 @@ class PickPlace(InstructionState):
             # checks if number is in point list, starts from 1
             if (int(self.instruction) >= 1) and (int(self.instruction) <= len(points)):
                 # selects the point
-                P = points[int(self.instruction)]
-                N = names[int(self.instruction)]
+                P = points[int(self.instruction - 1)]
+                N = names[int(self.instruction - 1)]
 
                 # asks for a confirm
                 name = 'POINT SELECTION OF POINT ' + str(N) + ': ' + str(P)
@@ -959,7 +964,7 @@ class PickPlace(InstructionState):
                 action = int(self.instruction)
 
                 # asks for a confirm
-                name = 'SELECTION OF ACTION: ' + str(actions[action])
+                name = 'SELECTION OF ACTION: ' + str(actions[action - 1])
                 self.confirmInstruction(name)
                 if self.command == 0:
                     # confirmed action
@@ -982,24 +987,26 @@ class PickPlace(InstructionState):
         # when executed, initializes the variables calling the reset method
         self.statename = 'PICK AND PLACE STATE'
         self.reset()
+        init_trajectory(self.trajectory, self.empty)
         # initializes points just to be sure that everything is up to date
-        _ = init_points()
+        #_ = init_points()
         # needed to correctly set the request number when entering the state
-        self.request.request_number = userdata.input + 1
+        #self.request.request_number = userdata.input + 1
         # prints list of commands and debug info
         rospy.loginfo(color.BOLD + color.CYAN + '[STATE 3: ' + self.statename + ']' + color.END)
         rospy.loginfo(color.BOLD + color.CYAN + 'READY TO RECEIVE INSTRUCTION!' + color.END)
         self.listCommands()
         # "change state" here means return home or start the pick and place operation mode
-        self.request.request_type = 'change_state'
-        self.pub.publish(self.request)
+        #self.request.request_type = 'change_state'
+        #self.pub.publish(self.request)
 
         while (self.nextstate == -1):
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
+            P = None
+            #self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
             # asks the user which action it wants. exit state is translated as -2.
 
             # selects the action from the list
-            action = select_action_from_list()
+            action = self.select_action_from_list()
             # asks for a confirm
             if self.command == 0:
                 # confirmed action! Selects the corresponding one from cases.
@@ -1019,7 +1026,7 @@ class PickPlace(InstructionState):
                     # move to point action, needs a point to be executed
                     while (P == None):
                         # selects a point from the list, asking the user which one it wants
-                        P = select_point_from_list()
+                        P = self.select_point_from_list()
                         # se ho P e non ho impostato nextstate a -2, procedo con l'azione
                         if self.command == 0:
                             # only if both the action and the point have been selected correctly
@@ -1040,9 +1047,10 @@ class PickPlace(InstructionState):
 
                 # waits for feedback
                 # if feedback received, asks if new instruction must be sent or exit
+                self.goal = False
                 while (self.goal == False):
                     # until goal not reached, checks the feedback topic
-                    self.trajsub = rospy.Subscriber('/feedback_topic', JointState, self.feedbackCallback, queue_size = 1)
+                    self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
 
                     if self.goal == True:
                         rospy.loginfo(color.BOLD + color.YELLOW + '-- POSITION REACHED --' + color.END)
@@ -1187,7 +1195,7 @@ class JogRun(InstructionState):
         # initializes variables by calling the reset method
         self.statename = 'START JOG MODE'
         self.reset()
-        init_trajectory()
+        init_trajectory(self.trajectory, self.empty)
         # updates the request number according to the old one
         self.request.request_number = userdata.input + 1
         # even if these have been initialized when the state has been built, it is
@@ -1221,11 +1229,11 @@ class JogRun(InstructionState):
                     if self.command == 0:
                         # save point confirmed, it needs to open the S points file, append it, recalculate the Q points and close everything
                         # gets the position from the feedback topic of the robot controller driver
-                        self.trajsub = rospy.Subscriber('/feedback_topic', JointState, self.feedbackCallback, queue_size = 1)
+                        self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
                         Q = self.last_position
                         # it is written as [0,0,0,0,0,0], already in joint state space
                         # loads the whole joints point list
-                        QQ = load_txt('/home/optolab/smach_ws/src/state_machine_package/data/QPoints.txt')
+                        QQ = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/QPoints.txt')
                         # appends the new point to the list and checks for duplicates
                         QQ.append(Q)
                         QQ = checkifduplicates(QQ)
@@ -1233,7 +1241,7 @@ class JogRun(InstructionState):
                         # TO DO: use the direct kinematics function
                         SS = elaborateKinMulti(QQ)
                         # writes them in the corresponding file. It is not an append but a complete rewriting of the contents
-                        SS = write_txt('/home/optolab/smach_ws/src/state_machine_package/data/SPoints.txt', Q)
+                        SS = write_txt('/home/ros/catkin_ws/src/state_machine_package/data/SPoints.txt', Q)
                         rospy.loginfo(color.BOLD + color.GREEN + '-- POINT ' + str(S) + ' SAVED, DUPLICATES REMOVED --' + color.END)
                         # updates the request and resets variables, thus it remains in the while loop after this (not breaking it)
                         self.update('jog_command')
@@ -1288,7 +1296,7 @@ class JogRun(InstructionState):
                         # prints a log here to debug what is doing
                         rospy.loginfo(color.BOLD + color.YELLOW + '[JOINT ' + str(joint) + ': ' + sdir + 'POSITION]' + color.END)
                         # gets last position
-                        self.trajsub = rospy.Subscriber('/feedback_topic', JointState, self.feedbackCallback, queue_size = 1)
+                        self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
                         # publish the movement command in the joint topic of the driver
                         positions = self.last_position + userdata.jogstep
                         write_trajectory(positions, self.empty, self.empty, self.empty)
@@ -1296,7 +1304,7 @@ class JogRun(InstructionState):
                         # waits for feedback here
                         while (self.goal == False):
                             # until goal not reached, checks the feedback topic
-                            self.trajsub = rospy.Subscriber('/feedback_topic', JointState, self.feedbackCallback, queue_size = 1)
+                            self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
 
                             if self.goal == True:
                                 rospy.loginfo(color.BOLD + color.GREEN + '-- POSITION REACHED --' + color.END)
@@ -1351,10 +1359,10 @@ class JogStepSize(State):
         rospy.loginfo(color.BOLD + color.CYAN + '[STATE 4: ' + self.statename + ']' + color.END)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING POINTS FILE --' + color.END)
         # calls gedit "filepath" in the shell, so to edit the step size manually
-        return_code = subprocess.call("gedit /home/optolab/smach_ws/src/state_machine_package/data/JogStepSize.txt", shell=True)
+        return_code = subprocess.call("gedit /home/ros/catkin_ws/src/state_machine_package/data/JogStepSize.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE!--' + color.END)
         # reloads the file after the editing process ended
-        step = load_txt('/home/optolab/smach_ws/src/state_machine_package/data/JogStepSize.txt')
+        step = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/JogStepSize.txt')
         # prints the new step size as a debug info
         rospy.loginfo(color.BOLD + color.YELLOW + '| NEW STEP SIZE: ' + str(step[0][0]) + ' |' + color.END)
         userdata.jogstep = float(step)
@@ -1480,7 +1488,7 @@ def main():
         # sets the robot velocity to 80% system wise
         sm.userdata.velocity = 0.80
         # sets the jog step size system wise loading it from file
-        sm.userdata.jogstep = load_txt('/home/optolab/smach_ws/src/state_machine_package/data/JogStepSize.txt')
+        sm.userdata.jogstep = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/JogStepSize.txt')
         sm.userdata.jogstep = sm.userdata.jogstep[0][0]
 
         # Open the container
@@ -1497,7 +1505,7 @@ def main():
                                     'jogstep':'jogstep'})
             smach.StateMachine.add('Home', Home(),
                                     transitions={'tState0':'ReadyState',
-                                    'tPointsDef':'PointsDef', 'tLRun':'LoopRun',
+                                    'tPointsDef':'PointsDef', 'tLoop':'Loop',
                                     'tPickPlace':'PickPlace', 'tJog':'Jog', 'tSetVel':'SetVel'},
                                     remapping={'input':'request_number',
                                     'output':'request_number',
