@@ -3,7 +3,7 @@
 import codecs
 
 class color:
-   PURPLE = '\033[95m'
+   PURPLE = '\033[95m' #loginfo and commands
    CYAN = '\033[96m' #quando chiedo input
    DARKCYAN = '\033[36m'
    BLUE = '\033[94m'
@@ -29,17 +29,19 @@ def load_txt(filename):
         #[[u'-200', u'-300', u'400', u'-90'], [u'-200', u'-300', u'400', u'-90']]
     return srow
 
-def write_txt(filename, data):
+def write_txt(filename, names, data):
     QQ = []
     file = open(filename,'w')
     for i in range(0, len(data)): #riga
         for j in range(0, len(data[i])): #elemento all'interno
+            value = round(float(data[i][j]),4)
             if j == range(0, len(data[i]))[-1]: #se e' l'ultimo valore
-                file.write(str(data[i][j]) + '\n')
+                file.write(str(value) + '\n')
+            elif j == 0:
+                file.write(str(names[i]) + ' ' + str(value) + ' ')
             else:
-                file.write(str(data[i][j]) + ' ')
-        #q = [round(float(item),2) for item in data[i]]
-        q = [item for item in data[i]]
+                file.write(str(value) + ' ')
+        q = [round(float(item),4) for item in data[i]]
         QQ.append(q)
     file.close()
     return QQ

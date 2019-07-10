@@ -14,6 +14,10 @@ import traceback
 from utils import *
 from actions_library import *
 
+########### DEFINITION OF MACRO ###########
+
+PKG_PATH = '/home/optolab/smach_ws/src/state_machine_package/'
+
 ########### STATE MACHINE BASIC CLASSES DEFINITION ###########
 
 class State(smach.State):
@@ -595,7 +599,7 @@ class PointsDef(State):
         # it uses a bunch of functions imported from utils.
         rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING XYZ POINTS FILE --' + color.END)
         # launches the gedit terminal command to open the file. It is statically defined here
-        return_code = subprocess.call("gedit /home/ros/catkin_ws/src/state_machine_package/data/SPoints.txt", shell=True)
+        return_code = subprocess.call("gedit " + PKG_PATH + "data/SPoints.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE! --' + color.END)
         # after modifiying, it loads the contents of the file into memory. S points are in XYZ coordinates
         QQ = init_points()
@@ -720,7 +724,7 @@ class LoopTrajectory(State):
 
         rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING TRAJECTORY FILE --' + color.END)
         # launches the gedit terminal command to open the file. It is statically defined here
-        return_code = subprocess.call("gedit /home/ros/catkin_ws/src/state_machine_package/data/SPoints.txt", shell=True)
+        return_code = subprocess.call("gedit " + PKG_PATH + "data/SPoints.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE! --' + color.END)
         ########################## EDIT RICHIESTO QUI
         # returns home automatically after these operations are concluded.
@@ -750,7 +754,7 @@ class LoopRun(InstructionState):
         self.request.request_number = userdata.input
 
         # loads the operations file. The file contains the names of the operations in the first column, and the paths in the second column
-        operationfile = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/Operations.txt')
+        operationfile = load_txt(PKG_PATH + 'data/Operations.txt')
         rospy.loginfo(color.BOLD + color.CYAN + 'CHOOSE EXISTING OPERATION FROM LIST:' + color.END)
         # prints the available operations from the file, so that the user can select one. The corresponding operation
         # is then loaded from its personal file which contains every detail of the execution
@@ -885,7 +889,7 @@ class LoopRun(InstructionState):
 
 ########### PICK AND PLACE STATE ###########
 
-'''CONTROLLA SE E' OK'''
+''' OK, BISOGNA SOLO SISTEMARE GRIPPER E SCREW ACTIONS '''
 class PickPlace(InstructionState):
     """ Pick and Place state. Allows the user to send to the robot some actions
     interactively, meaning that if no exit gesture is seen the robot waits for the next
@@ -905,7 +909,7 @@ class PickPlace(InstructionState):
         self.reset()
         P = None
         # loads the points file in joints coordinates
-        file = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/QPoints.txt')
+        file = load_txt(PKG_PATH + 'data/QPoints.txt')
         names, points = load_points(file)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- SELECT POINT FROM LIST --' + color.END)
         for i in range(0,len(names)):
@@ -989,7 +993,7 @@ class PickPlace(InstructionState):
         self.reset()
         init_trajectory(self.trajectory, self.empty)
         # initializes points just to be sure that everything is up to date
-        #_ = init_points()
+        _ = init_points()
         # needed to correctly set the request number when entering the state
         #self.request.request_number = userdata.input + 1
         # prints list of commands and debug info
@@ -1001,10 +1005,7 @@ class PickPlace(InstructionState):
         #self.pub.publish(self.request)
 
         while (self.nextstate == -1):
-            P = None
-            #self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
             # asks the user which action it wants. exit state is translated as -2.
-
             # selects the action from the list
             action = self.select_action_from_list()
             # asks for a confirm
@@ -1024,6 +1025,7 @@ class PickPlace(InstructionState):
                     screw(self.trajpub)
                 else:
                     # move to point action, needs a point to be executed
+                    P = None
                     while (P == None):
                         # selects a point from the list, asking the user which one it wants
                         P = self.select_point_from_list()
@@ -1233,7 +1235,7 @@ class JogRun(InstructionState):
                         Q = self.last_position
                         # it is written as [0,0,0,0,0,0], already in joint state space
                         # loads the whole joints point list
-                        QQ = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/QPoints.txt')
+                        QQ = load_txt(PKG_PATH + 'data/QPoints.txt')
                         # appends the new point to the list and checks for duplicates
                         QQ.append(Q)
                         QQ = checkifduplicates(QQ)
@@ -1241,7 +1243,7 @@ class JogRun(InstructionState):
                         # TO DO: use the direct kinematics function
                         SS = elaborateKinMulti(QQ)
                         # writes them in the corresponding file. It is not an append but a complete rewriting of the contents
-                        SS = write_txt('/home/ros/catkin_ws/src/state_machine_package/data/SPoints.txt', Q)
+                        SS = write_txt(PKG_PATH + 'data/SPoints.txt', Q)
                         rospy.loginfo(color.BOLD + color.GREEN + '-- POINT ' + str(S) + ' SAVED, DUPLICATES REMOVED --' + color.END)
                         # updates the request and resets variables, thus it remains in the while loop after this (not breaking it)
                         self.update('jog_command')
@@ -1294,7 +1296,7 @@ class JogRun(InstructionState):
                         # if a valid command has been read (meaning that joint and direction are not 0)
                         # then we got a valid instruction and we can move the robot
                         # prints a log here to debug what is doing
-                        rospy.loginfo(color.BOLD + color.YELLOW + '[JOINT ' + str(joint) + ': ' + sdir + 'POSITION]' + color.END)
+                        rospy.loginfo(color.BOLD + color.YELLOW + '[JOINT ' + str(self.joint) + ': ' + sdir + ' POSITION]' + color.END)
                         # gets last position
                         self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
                         # publish the movement command in the joint topic of the driver
@@ -1302,6 +1304,7 @@ class JogRun(InstructionState):
                         write_trajectory(positions, self.empty, self.empty, self.empty)
                         send_trajectory()
                         # waits for feedback here
+                        self.goal = False
                         while (self.goal == False):
                             # until goal not reached, checks the feedback topic
                             self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
@@ -1359,13 +1362,13 @@ class JogStepSize(State):
         rospy.loginfo(color.BOLD + color.CYAN + '[STATE 4: ' + self.statename + ']' + color.END)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING POINTS FILE --' + color.END)
         # calls gedit "filepath" in the shell, so to edit the step size manually
-        return_code = subprocess.call("gedit /home/ros/catkin_ws/src/state_machine_package/data/JogStepSize.txt", shell=True)
+        return_code = subprocess.call("gedit " + PKG_PATH + "data/JogStepSize.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE!--' + color.END)
         # reloads the file after the editing process ended
-        step = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/JogStepSize.txt')
+        step = load_txt(PKG_PATH + 'data/JogStepSize.txt')
         # prints the new step size as a debug info
         rospy.loginfo(color.BOLD + color.YELLOW + '| NEW STEP SIZE: ' + str(step[0][0]) + ' |' + color.END)
-        userdata.jogstep = float(step)
+        userdata.jogstep = float(step[0][0])
         # goes back to previous state, depending on which one was it
 
         if userdata.oldstate == 'JOG MODE STATE':
@@ -1407,7 +1410,7 @@ class SetVel(State):
     def execute(self, userdata):
         # initializes variables
         self.statename = 'SET ROBOT MOVEMENT SPEED'
-        self.update()
+        self.reset()
         # updates the request number
         self.request.request_number = userdata.input + 1
         # prints a debug info and the command list
@@ -1461,7 +1464,7 @@ class SetVel(State):
         # They allow to go back to previous state, home in this case
         self.statename = 'HOME STATE'
         rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
-        userdata.output = self.request.request_type
+        userdata.output = self.request.request_number
         userdata.oldstate = 'SET ROBOT MOVEMENT SPEED STATE'
         return 'tHome'
 
@@ -1488,7 +1491,7 @@ def main():
         # sets the robot velocity to 80% system wise
         sm.userdata.velocity = 0.80
         # sets the jog step size system wise loading it from file
-        sm.userdata.jogstep = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/JogStepSize.txt')
+        sm.userdata.jogstep = load_txt(PKG_PATH + 'data/JogStepSize.txt')
         sm.userdata.jogstep = sm.userdata.jogstep[0][0]
 
         # Open the container
@@ -1587,10 +1590,15 @@ def main():
         # Execute SMACH plan
         outcome = sm.execute()
 
-        # stops and quits
-        sis.stop()
-        rospy.on_shutdown(myhook)
-        sys.exit(0)
+    # stops and quits
+    # this does not work because of the state machine...
+    # it is better to use the launcher file and quit the launcher anytime
+    sis.stop()
+    rospy.on_shutdown(myhook)
+    sys.exit(0)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

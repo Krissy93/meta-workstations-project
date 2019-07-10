@@ -43,14 +43,14 @@ class KinectDataSubscriber:
         """ Called whenever color data is available. """
         cv_image = self.bridge.imgmsg_to_cv2(data, desired_encoding="passthrough")
         self.color_mutex.acquire()
-        self.color_image = cv_image
+        self.color_image = np.array(cv_image, dtype=np.uint8)
         self.color_mutex.release()
 
     def depth_callback(self, data):
         """ Called whenever depth data is available. """
         cv_image = self.bridge.imgmsg_to_cv2(data, desired_encoding="passthrough")
         self.depth_mutex.acquire()
-        self.depth_image = cv_image
+        self.depth_image = np.array(cv_image, dtype=np.uint16)
         self.depth_mutex.release()
 
 class MessageUpdater():
@@ -78,9 +78,9 @@ class MessageUpdater():
         cap = cv2.cvtColor(cap,cv2.COLOR_RGB2BGR)'''
 
         # model initialization
-        PATH_TO_CKPT = '/home/optolab/CIM/CIM06/models/rfcn_resnet101_coco/exported/frozen_inference_graph.pb'
+        PATH_TO_CKPT = 'network/frozen_RGB_graph.pb'
         # List of the strings that is used to add correct label for each box.
-        PATH_TO_LABELS = '/home/optolab/CIM/CIM06/data/CIM06_labelmap.pbtxt'
+        PATH_TO_LABELS = 'network/labelmap.pbtxt'
         NUM_CLASSES = 29
         # Loading label map
         self.label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
@@ -100,7 +100,7 @@ class MessageUpdater():
         # gets the frame from the Kinect
         self.kinect.color_mutex.acquire()
         if (data.color_image is not None):
-            color = data.color_image.copy()
+            image_np = data.color_image.copy()
             data.color_mutex.release()
             # Detection
             with self.detection_graph.as_default():
@@ -310,9 +310,11 @@ class MessageUpdater():
             self.correct = False
 
 
-    def responseCallback(self, msg):
+    def messageCallback(self, msg):
         # check if new request has been received
         # according to the request number
+        # if new request has number different from the old request number, then it's
+        # a new request and I have to elaborate a response!
         if msg.request_number != self.request.request_number:
             self.request = msg
             rospy.loginfo(color.BOLD + color.YELLOW + 'RECEIVED REQUEST NUMBER: ' + str(self.request.request_number) + color.END)
@@ -325,8 +327,8 @@ class MessageUpdater():
         self.received = False
         # waits for the request
         while self.correct == False:
-            self.sub = rospy.Subscriber('/command_request', commandRequest, self.responseCallback, queue_size=1)
-            # if response received, it tries to translate the gesture
+            self.sub = rospy.Subscriber('/command_request', commandRequest, self.messageCallback, queue_size=1)
+            # if request received, it tries to translate the gesture
             if self.received == True:
                 # if new request has been correctly received, calls the detection function
                 boxes, classes, scores, num_detections = self.detect()
@@ -372,11 +374,11 @@ def videostream():
 
 
 def myhook():
-    print(color.BOLD + color.RED + '\n -- keyboard interrupt, shutting down --' + color.END)
+    print(color.BOLD + color.RED + '\n -- KEYBOARD INTERRUPT, SHUTTING DOWN --' + color.END)
 
 def main():
     rospy.init_node('gestures_node')
-    updater = message_updater()
+    updater = MessageUpdater()
     #cap = videostream()
 
     while not rospy.is_shutdown():

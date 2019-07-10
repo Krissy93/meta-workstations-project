@@ -6,14 +6,19 @@ from utils import *
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState
 
+PKG_PATH = '/home/optolab/smach_ws/src/state_machine_package/'
+
 def action_list():
     """ Prints all the available actions present in this file. """
 
+    rospy.loginfo(color.BOLD + color.PURPLE + '|-------------------|' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '| AVAILABLE ACTIONS |' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '| 1: MOVE TO POINT  |' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '| 2: OPEN GRIPPER   |' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '| 3: CLOSE GRIPPER  |' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '| 4: SCREW          |' + color.END)
+    rospy.loginfo(color.BOLD + color.PURPLE + '|-2: EXIT           |' + color.END)
+    rospy.loginfo(color.BOLD + color.PURPLE + '|-------------------|' + color.END)
 
     actions = ['MOVE TO POINT', 'OPEN GRIPPER', 'CLOSE GRIPPER', 'SCREW']
 
@@ -24,7 +29,7 @@ def init_points():
     to the robot-dependant inverse kinematic function. This function is defined in robot.py """
 
     # loads the points file
-    file = load_txt('/home/ros/catkin_ws/src/state_machine_package/data/SPoints.txt')
+    file = load_txt(PKG_PATH + 'data/SPoints.txt')
     names, points = load_points(file)
     # checks for duplicates. Just a safety measure
     names, points = checkifduplicates(names, points)
@@ -32,12 +37,11 @@ def init_points():
     # the function calls the corresponding inverse kinematics function of the robot
     Q = elaborateKinMulti(points)
     # writes them in the corresponding file. It is not an append but a complete rewriting of the contents
-    QQ = zip(names, Q)
-    QPoints = write_txt('/home/ros/catkin_ws/src/state_machine_package/data/QPoints.txt', QQ)
+    QPoints = write_txt(PKG_PATH + 'data/QPoints.txt', names, Q)
     # debug
-    rospy.loginfo(color.BOLD + color.PURPLE + '-- JOINTS COORDINATES RECALCULATED!--' + color.END)
+    print(color.BOLD + color.PURPLE + '-- JOINTS COORDINATES RECALCULATED!--' + color.END)
     for i in range(0,len(points)):
-        rospy.loginfo(color.BOLD + color.YELLOW + '| POINT ' + str(names[i]) + ' ' + str(points[i]) + ' | ' + str(Q[i]) + ' |' + color.END)
+        print(color.BOLD + color.YELLOW + '| POINT ' + str(names[i]) + ' ' + str(points[i]) + ' | ' + str(QPoints[i]) + ' |' + color.END)
     return QPoints
 
 
@@ -59,11 +63,13 @@ def write_trajectory(trajectory, positions, velocities, accelerations, effort):
     The sequence number and time stamp are calculated based on what was the previous message sent.
     Each value of positions, velocity and so on refers to a specific joint in the same list position.
     Note that positions etc must be given to the function as lists: [[0,0,0,0,0,0], [1,1,1,1,1,1], ...] """
-    
+
+    # needed to set a single point in the right format.
     positions = [positions]
     velocities = [velocities]
     accelerations = [accelerations]
     effort = [effort]
+    # needed to empty the previous portion of the message which contains the point
     trajectory.points = []
 
     for i in range(0,len(positions)):
