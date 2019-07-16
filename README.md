@@ -9,7 +9,7 @@ If you use this code for your research or find it useful, please cite it:
 
 ## Table of Contents
 - [Installation instructions](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Installation.md)
-- [Overview]
+- [Overview](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Overview.md)
 - [The code explained]
 
 ## Custom modules
