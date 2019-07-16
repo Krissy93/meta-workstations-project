@@ -26,6 +26,7 @@ Detailed information on the functionalities can be found in the corresponding fi
 To use the State Machine the user must give it commands in two ways:
 - By using the **Keyboard Node:** in this case the commands must be numbers according to the available command list of each state (printed every time the user enters a state).
 - By using the **Gestures Node:** in this case the user performs some hand gestures following a specific code. The gestures are then translated into numerical commands according to what the camera sees.
+
 [Here](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Gestures%20Node.md) the node idea is explained in detail. The functionality of the node is the same even if the Keyboard version is used, just remember to write the numerical command corresponding to the gesture you want to perform.
 
 ## Robot Driver Node
