@@ -74,3 +74,22 @@ Download our model and follow the guidelines of the [TensorFlow Object Detection
 Other models can also be used: simply train your own (even in different frameworks if you prefer), froze them and load them in the code.
 
 Remember to edit the State Machine and Gesture Node files to consider your new gestures too.
+
+## How to use it?
+Two versions are available: one that uses images as input to read the hand-gestures and send a command to the State Machine, one that bypasses this step and prompts the user to type a numerical command directly. The second version is usually used as a debug method to check if the transitions between the states are correct and basically check rapidly if everything works.
+
+To use them, simply open two terminals. In the first one type:
+```
+roslaunch state_machine_package launch_state_machine.launch
+```
+which launches [this](https://github.com/Krissy93/meta-workstations-project/blob/master/state_machine_package/launch/launch_state_machine.launch) file. This starts the state machine and the SMACH viewer at the same time.
+
+In the second terminal type:
+```
+roslaunch state_machine_package keyboard_gestures_node.launch
+```
+to launch the Keyboard Node, or
+```
+roslaunch state_machine_package hand_gestures_node.launch
+```
+to launch the Gestures Node.
