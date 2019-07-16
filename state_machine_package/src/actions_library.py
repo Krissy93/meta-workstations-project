@@ -56,7 +56,7 @@ def init_trajectory(trajectory, empty):
     trajectory.header.frame_id = 'robot_trajectory'
     trajectory.joint_names = ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6']
     #write_trajectory(trajectory, empty, empty, empty, empty)
-    print(trajectory)
+    #print(trajectory)
 
 def write_trajectory(trajectory, positions, velocities, accelerations, effort):
     """ Method to create a JointTrajectory message ready to be sent to the driver node.

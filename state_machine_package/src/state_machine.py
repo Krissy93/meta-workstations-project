@@ -17,6 +17,7 @@ from actions_library import *
 ########### DEFINITION OF MACRO ###########
 
 PKG_PATH = '/home/optolab/smach_ws/src/state_machine_package/'
+start_execution = time.time()
 
 ########### STATE MACHINE BASIC CLASSES DEFINITION ###########
 
@@ -409,7 +410,6 @@ class ReadyState(State):
         rospy.loginfo(color.BOLD + color.RED + '-- EXITING PROGRAM --' + color.END)
         userdata.output = self.request.request_number
         userdata.oldstate = 'ROOT'
-        #self.request_preempt() ????
         return 'texit'
 
 
@@ -950,8 +950,6 @@ class PickPlace(InstructionState):
         return P
 
     def select_action_from_list(self):
-        # resets variables
-        self.reset()
         # first prints the actions available
         actions = action_list()
 
@@ -983,6 +981,10 @@ class PickPlace(InstructionState):
                     # waits
                     rospy.loginfo(color.BOLD + color.YELLOW + '-- PLEASE RE-ENTER INSTRUCTION --' + color.END)
                     self.update('instruction_command')
+            else: # -2 given
+                action = None
+                self.command = -2
+                self.nexstate = -2
 
         # after exiting the while loop, it returns the point P
         return action
@@ -991,6 +993,8 @@ class PickPlace(InstructionState):
         # when executed, initializes the variables calling the reset method
         self.statename = 'PICK AND PLACE STATE'
         self.reset()
+        # needed to correctly set the request number when entering the state
+        self.request.request_number = userdata.input
         init_trajectory(self.trajectory, self.empty)
         # initializes points just to be sure that everything is up to date
         _ = init_points()
@@ -1472,7 +1476,8 @@ class SetVel(State):
 
 def myhook():
     # just prints an info log at shutdown
-    rospy.loginfo(color.BOLD + color.RED + '\n -- KEYBOARD INTERRUPT, SHUTTING DOWN --' + color.END)
+    end_execution = time.time()
+    rospy.loginfo(color.BOLD + color.RED + '\n -- KEYBOARD INTERRUPT, SHUTTING DOWN. ELAPSED TIME: ' + str(end_execution - start_execution) + ' SECONDS --' + color.END)
 
 def main():
     # init node
@@ -1589,13 +1594,11 @@ def main():
 
         # Execute SMACH plan
         outcome = sm.execute()
-
-    # stops and quits
-    # this does not work because of the state machine...
-    # it is better to use the launcher file and quit the launcher anytime
-    sis.stop()
-    rospy.on_shutdown(myhook)
-    sys.exit(0)
+        if outcome == 'exit':
+            # stops and quits
+            sis.stop()
+            rospy.on_shutdown(myhook)
+            sys.exit(0)
 
 if __name__ == '__main__':
     try:
