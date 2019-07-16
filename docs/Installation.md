@@ -27,7 +27,10 @@ Install dependencies first:
   catkin_make
   echo "source /home/$USER/workspace/ros/devel/setup.bash" >> /home/$USER/.bashrc
   ```
-- **ROS Industrial**
+- **ROS Industrial:** Official page can ben found [here](http://wiki.ros.org/Industrial/Install). The previous ROS installation should have installed everything already, but to be sure type:
+ ```
+ apt-get install ros-kinetic-industrial-core ros-kinetic-abb ros-kinetic-universal-robot apt-get install ros-kinetic-ros-canopen
+ ```
 - **CUDA and CuDNN:** we installed CUDA 9 and CuDNN 7.3, other combinations may also work.<br>
   Download CUDA 9 from [here](https://developer.nvidia.com/cuda-toolkit-archive) and CuDNN 7.3 from [here](https://developer.nvidia.com/rdp/cudnn-archive).
   From the Download folder, open a terminal and install CUDA 9:
@@ -67,7 +70,7 @@ If using a RealSense or other camera, install their dependencies (For the RealSe
     cd libfreenect2
     sudo apt-get install cmake pkg-config libusb-1.0-0-dev libturbojpeg libjpeg-turbo8-dev libglfw3-dev
     mkdir build && cd build
-    cmake .. -DENABLE_CXX11=ON -DCUDA_PROPAGATE_HOST_FLAGS=off -DCMAKE_INSTALL_PREFIX=$HOME/freenect2
+    cmake .. -DENABLE_CXX11=ON -DCUDA_PROPAGATE_HOST_FLAGS=off
     make
     make install
     echo '# ATTR{product}=="Kinect2"
@@ -135,6 +138,10 @@ If using a RealSense or other camera, install their dependencies (For the RealSe
   sudo sh -c 'echo "/usr/local/lib" >> /etc/ld.so.conf.d/opencv.conf'
   sudo ldconfig
   ```
+- **pylibfreenect2:** This is the python wrapper needed to correctly set up the Kinect acquisition. Official repository and installation instructions are [here](https://github.com/r9y9/pylibfreenect2/blob/master/docs/installation.rst). Basically after `libfreenect2` installation (the default installation directory is `usr/local`, so check if it is installed there) simply type:
+  ```
+  pip install pylibfreenect2
+  ```
 - **iai_kinect2:** the main iai_kinect2 repository is [here](https://github.com/code-iai/iai_kinect2), check it out to understand how to use it! The installation steps are:
   ```
   cd workspace/ros/src/
@@ -147,16 +154,12 @@ If using a RealSense or other camera, install their dependencies (For the RealSe
   ```
   To test if everything works, edit the launch file located at `workspace/ros/src/iai_kinect2/kinect2_bridge/launch` and set `publish_tf` to `True`, `depth_method` to `cuda` and `reg_method` to `cl` or `cpu`.<br>
   Open a new terminal and type `roslaunch kinect2_bridge kinect2_bridge.launch`.   If everything works you should see some logs in the terminal, hopefully none in red. Open `rviz` and select `kinect2_link`, add a `PointCloud2` topic and select a random topic to see if everything works correctly. Check out the main page of the node to learn how to use it to the fullest!
-
 - **Tensorflow Object Detection API:** the main repository can be found [here](https://github.com/tensorflow/models/tree/master/research/object_detection). Follow the instructions for installing dependencies and the API itself, we installed tensorflow-gpu since we have an Nvidia GPU. We also installed COCOAPI, it was required for the training phase, but if you plan to use only our provided frozen graph it shouldn't be needed.
-
 ## Install the project
-- **SMACH module:** this is needed for the State Machine core structure. It has been modified to correct some bugs
-Finally, clone this repository and place it under your ros/src workspace directory:
-Open a new terminal and:
+In a new terminal, type:
 ```
 cd workspace/ros/src
 git clone xxxx
-cd ..
-catkin_make
 ```
+- **SMACH module:** this is needed for the State Machine core structure. It has been modified to correct some bugs from the [original project](http://wiki.ros.org/smach). Install the modified version by copying the `executive_smach_visualization` folder (inside the `meta-workstations-project` folder just cloned) into your `$HOME/workspace/ros/src/` directory.
+- **State Machine Package:** this is the ros package we developed, containing the State Machine node, the Gestures node and everything needed by these two. Copy the `state_machine_package` folder into your `$HOME/workspace/ros/src/` directory, and finally install everything: go the `$HOME/workspace/ros` directory and type `catkin_make`.
