@@ -22,7 +22,7 @@ Detailed information on the functionalities can be found in the corresponding fi
 - Jog State
 - Set System Velocity State
 
-## Commands Node
+## Gesture Recognition Node
 To use the State Machine the user must give it commands in two ways:
 - By using the **Keyboard Node:** in this case the commands must be numbers according to the available command list of each state (printed every time the user enters a state).
 - By using the **Gestures Node:** in this case the user performs some hand gestures following a specific code. The gestures are then translated into numerical commands according to what the camera sees.
