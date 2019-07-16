@@ -3,7 +3,7 @@ The system is composed of several nodes that perform some core functionality. Th
 At the present time, the developed structure is detailed in Fig. 1.
 
 <p align="center">
-  <img height="250" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/Fig1.png">
+  <img height="400" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/system_overview.png">
 </p>
 
 ## State Machine Node
