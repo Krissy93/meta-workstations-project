@@ -1,0 +1,11 @@
+<launch>
+
+  <node pkg="state_machine_package"
+        type="gesture_reader.py"
+        name="gesture_interpreter_node"
+        respawn="false"
+        output="log"
+        required="true">
+  </node>
+
+</launch>
