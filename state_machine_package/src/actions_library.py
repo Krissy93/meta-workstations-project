@@ -5,8 +5,9 @@ from robot import *
 from utils import *
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from sensor_msgs.msg import JointState
+from std_srvs.srv import SetBool
 
-PKG_PATH = '/home/optolab/smach_ws/src/state_machine_package/'
+PKG_PATH = '/home/eulero/projects/ros_ws/src/state_machine_package/'
 
 def action_list():
     """ Prints all the available actions present in this file. """
@@ -24,7 +25,7 @@ def action_list():
 
     return actions
 
-def init_points():
+def init_points2():
     """ Loads the XYZ points file and calculates the joints coordinates according
     to the robot-dependant inverse kinematic function. This function is defined in robot.py """
 
@@ -44,6 +45,19 @@ def init_points():
         print(color.BOLD + color.YELLOW + '| POINT ' + str(names[i]) + ' ' + str(points[i]) + ' | ' + str(QPoints[i]) + ' |' + color.END)
     return QPoints
 
+def init_points():
+    """ Loads the XYZ points file and calculates the joints coordinates according
+    to the robot-dependant inverse kinematic function. This function is defined in robot.py """
+
+    # loads the points file
+    file = load_txt(PKG_PATH + 'data/QPoints.txt')
+    names, points = load_points(file)
+
+    rospy.loginfo(color.BOLD + color.PURPLE + '-- JOINTS COORDINATES: --' + color.END)
+    for i in range(0,len(points)):
+        rospy.loginfo(color.BOLD + color.YELLOW + '| POINT ' + str(names[i]) + ' ' + str(points[i]) + color.END)
+    return points
+
 
 def init_trajectory(trajectory, empty):
     """ The trajectory message is initialized here when first called.
@@ -51,14 +65,15 @@ def init_trajectory(trajectory, empty):
     according to how many joints it has. TO DO: loads this info from userdata given at launch? """
 
     trajectory.header.seq = 1
-    trajectory.header.stamp.secs = 0
-    trajectory.header.stamp.nsecs = 0
-    trajectory.header.frame_id = 'robot_trajectory'
-    trajectory.joint_names = ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6']
+    #trajectory.header.stamp.secs = 0
+    #trajectory.header.stamp.nsecs = 0
+    #trajectory.header.frame_id = ''
+    #trajectory.joint_names = ['joint_1','joint_2','joint_3','joint_4','joint_5','joint_6']
+    trajectory.name = ['ur10_shoulder_pan_joint', 'ur10_shoulder_lift_joint', 'ur10_elbow_joint', 'ur10_wrist_1_joint', 'ur10_wrist_2_joint', 'ur10_wrist_3_joint']
     #write_trajectory(trajectory, empty, empty, empty, empty)
     #print(trajectory)
 
-def write_trajectory(trajectory, positions, velocities, accelerations, effort):
+def write_trajectory2(trajectory, positions, velocities, accelerations, effort):
     """ Method to create a JointTrajectory message ready to be sent to the driver node.
     The sequence number and time stamp are calculated based on what was the previous message sent.
     Each value of positions, velocity and so on refers to a specific joint in the same list position.
@@ -80,6 +95,28 @@ def write_trajectory(trajectory, positions, velocities, accelerations, effort):
         points.effort = effort[i]
 
         trajectory.points.append(points)
+    print(trajectory)
+
+def write_trajectory(trajectory, positions, velocities, accelerations, effort):
+    """ Method to create a JointTrajectory message ready to be sent to the driver node.
+    The sequence number and time stamp are calculated based on what was the previous message sent.
+    Each value of positions, velocity and so on refers to a specific joint in the same list position.
+    Note that positions etc must be given to the function as lists: [[0,0,0,0,0,0], [1,1,1,1,1,1], ...] """
+
+    # needed to set a single point in the right format.
+    #trajectory.position = [positions]
+    #trajectory.velocity = [velocities]
+    #trajectory.effort = [effort]
+
+    trajectory.position = []
+    trajectory.velocity = []
+    trajectory.effort = []
+    
+    for i in range(0,len(positions)):
+        trajectory.position.append(float(positions[i]))
+        trajectory.velocity.append(float(velocities[i]))
+        trajectory.effort.append(float(effort[i]))
+
     print(trajectory)
 
 def send_trajectory(trajectory, pub):
@@ -106,18 +143,38 @@ def move_to_point(pub, trajectory, P, V, A, E):
     # by calling the subscriber and checking the self.goal variable. If goal is true
     # then other actions can be performed afterward
 
+def servCallback(request):
+    if request.success == True:
+        rospy.loginfo(color.BOLD + color.GREEN + '-- SUCCESS --' + color.END)
+    return request.success
+
+
 def control_gripper(command):
     """ Function to open the end effector aka the gripper or closing it according to the command given.
     If command == 1 opens gripper, if command == -1 closes gripper. """
 
     # where is the gripper defined?
 
+    grip = SetBool()
     if command == 1:
         # opens gripper
+        grip = False
         rospy.loginfo(color.BOLD + color.YELLOW + '-- OPEN GRIPPER --' + color.END)
+        #print('OK')
     else:
         # closes gripper
+        grip = True
         rospy.loginfo(color.BOLD + color.YELLOW + '-- CLOSE GRIPPER --' + color.END)
+        #print('NOK')
+
+    rospy.wait_for_service('/gripper/grasp')
+    try:
+        grip_service = rospy.ServiceProxy('/gripper/grasp', SetBool)
+        response = grip_service(grip)
+        grip_service.close()
+        return response
+    except rospy.ServiceException:
+        rospy.logerror('Service call failed')
 
 def screw(pub):
     """ To screw something usually the last-1 joint is the one to move.

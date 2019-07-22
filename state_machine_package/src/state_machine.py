@@ -16,7 +16,7 @@ from actions_library import *
 
 ########### DEFINITION OF MACRO ###########
 
-PKG_PATH = '/home/optolab/smach_ws/src/state_machine_package/'
+PKG_PATH = '/home/eulero/projects/ros_ws/src/state_machine_package/'
 start_execution = time.time()
 
 ########### STATE MACHINE BASIC CLASSES DEFINITION ###########
@@ -44,13 +44,14 @@ class State(smach.State):
         self.sub = 0
         self.trajsub = 0
         self.pub = rospy.Publisher('/command_request', commandRequest, queue_size = 1)
-        self.trajpub = rospy.Publisher('/joint_path_command', JointTrajectory, queue_size = 1, latch=True)
+        #self.trajpub = rospy.Publisher('/joint_path_command', JointTrajectory, queue_size = 1, latch=True)
+        self.trajpub = rospy.Publisher('/joint_state_pose', JointState, queue_size = 1, latch=True)
         self.request = commandRequest()
-        self.trajectory = JointTrajectory()
+        self.trajectory = JointState()
         # basic empty vector useful for initialization of velocities accelerations and effort
         # it is a vector of 10 elemets, which is the maximum. It is okay because messages
         # are created based on the position vector, which is robot dependant
-        self.empty = [0,0,0,0,0,0,0,0,0,0]
+        self.empty = [0,0,0,0,0,0]
 
     def stateCallback(self, msg):
         """ The structure of the request is:
@@ -68,6 +69,37 @@ class State(smach.State):
                 self.command = new
             elif msg.request_type == 'change_state':
                 self.nextstate = new
+
+    def feedbackCallback2(self, msg):
+        """ Callback function that reads the feedback written by the robot in the feedback topic.
+        Be careful since the feedback is written continuosly, so the trick with the stamp to align
+        the messages do not work. In this case it is better to check here if the feedback received
+        corresponds to the theoretical position the system is waiting for.
+
+        std_msgs/Header header
+            uint32 seq
+            time stamp
+            string frame_id
+        string[] name
+        float64[] position
+        float64[] velocity
+        float64[] effort"""
+
+        # to know if the robot reached the goal, the callback must check
+        # if the position obtained from the feedback (msg.position) has a value
+        # between the theoretical position +- 0.01 radiants. This is a safety measure
+        # because it is nearly impossible to reach the theoretical position requested
+        # so an approximation is needed
+        if (msg.position >= self.trajectory.positions - 0.01) and (msg.position <= self.trajectory.positions + 0.01):
+        #print(self.trajectory.points[0].positions)
+        #if (msg.position[0] == 888) and (msg.position[1] >= self.trajectory.points[0].positions[1] - 0.01) and (msg.position[1] <= self.trajectory.points[0].positions[1] + 0.01):
+            # if the two positions are almost equal, it means that the robot
+            # has reached the goal of the last message. Sets the goal to true
+            self.goal = True
+        else:
+            self.goal = False
+        # regardless of the goal, it updates the position according to what is read on the topic
+        self.last_position = msg.position
 
     def feedbackCallback(self, msg):
         """ Callback function that reads the feedback written by the robot in the feedback topic.
@@ -89,9 +121,9 @@ class State(smach.State):
         # between the theoretical position +- 0.01 radiants. This is a safety measure
         # because it is nearly impossible to reach the theoretical position requested
         # so an approximation is needed
-        #if (msg.position <= self.trajectory.positions - 0.01) and (msg.position >= self.trajectory.positions + 0.01):
+        if (msg.position[0] >= self.trajectory.position[0] - 0.01) and (msg.position[0] <= self.trajectory.position[0] + 0.01):
         #print(self.trajectory.points[0].positions)
-        if (msg.position[0] == 888) and (msg.position[1] >= self.trajectory.points[0].positions[1] - 0.01) and (msg.position[1] <= self.trajectory.points[0].positions[1] + 0.01):
+        #if (msg.position[0] == 888) and (msg.position[1] >= self.trajectory.points[0].positions[1] - 0.01) and (msg.position[1] <= self.trajectory.points[0].positions[1] + 0.01):
             # if the two positions are almost equal, it means that the robot
             # has reached the goal of the last message. Sets the goal to true
             self.goal = True
@@ -977,14 +1009,17 @@ class PickPlace(InstructionState):
                     action = None
                     self.nextstate = -2
                     break
-                else:
+                else: # -3
                     # waits
                     rospy.loginfo(color.BOLD + color.YELLOW + '-- PLEASE RE-ENTER INSTRUCTION --' + color.END)
                     self.update('instruction_command')
-            else: # -2 given
+
+            elif self.instruction == -2:
+                self.nextstate = -2
+                break
+
+            else: # waits
                 action = None
-                self.command = -2
-                self.nexstate = -2
 
         # after exiting the while loop, it returns the point P
         return action
@@ -1019,14 +1054,16 @@ class PickPlace(InstructionState):
                 # TO DO: HOW TO CONTROL GRIPPER?
                 if (action == 2):
                     # open gripper action
-                    control_gripper(1)
+                    response = control_gripper(1)
+
                 elif (action == 3):
                     # close gripper action
-                    control_gripper(-1)
-                elif (action == 4):
+                    response = control_gripper(-1)
+
+                #elif (action == 4):
                     # screw action, set to default
                     # TO DO: HOW TO DO THE SCREW COMMAND?
-                    screw(self.trajpub)
+                #    screw(self.trajpub)
                 else:
                     # move to point action, needs a point to be executed
                     P = None
@@ -1055,8 +1092,12 @@ class PickPlace(InstructionState):
                 # if feedback received, asks if new instruction must be sent or exit
                 self.goal = False
                 while (self.goal == False):
-                    # until goal not reached, checks the feedback topic
-                    self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                    if action != 2 and action != 3:
+                        # until goal not reached, checks the feedback topic
+                        self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                    else:
+                        # if the action is a gripper one, sets the goal to true automatically
+                        self.goal = True
 
                     if self.goal == True:
                         rospy.loginfo(color.BOLD + color.YELLOW + '-- POSITION REACHED --' + color.END)
@@ -1235,7 +1276,7 @@ class JogRun(InstructionState):
                     if self.command == 0:
                         # save point confirmed, it needs to open the S points file, append it, recalculate the Q points and close everything
                         # gets the position from the feedback topic of the robot controller driver
-                        self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                        self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
                         Q = self.last_position
                         # it is written as [0,0,0,0,0,0], already in joint state space
                         # loads the whole joints point list
@@ -1302,7 +1343,7 @@ class JogRun(InstructionState):
                         # prints a log here to debug what is doing
                         rospy.loginfo(color.BOLD + color.YELLOW + '[JOINT ' + str(self.joint) + ': ' + sdir + ' POSITION]' + color.END)
                         # gets last position
-                        self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                        self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
                         # publish the movement command in the joint topic of the driver
                         positions = self.last_position + userdata.jogstep
                         write_trajectory(positions, self.empty, self.empty, self.empty)
@@ -1311,7 +1352,7 @@ class JogRun(InstructionState):
                         self.goal = False
                         while (self.goal == False):
                             # until goal not reached, checks the feedback topic
-                            self.trajsub = rospy.Subscriber('/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                            self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
 
                             if self.goal == True:
                                 rospy.loginfo(color.BOLD + color.GREEN + '-- POSITION REACHED --' + color.END)
@@ -1494,7 +1535,7 @@ def main():
         sm.userdata.request_number = 0
         sm.userdata.oldstate = 'NONE'
         # sets the robot velocity to 80% system wise
-        sm.userdata.velocity = 0.80
+        sm.userdata.velocity = 1.0
         # sets the jog step size system wise loading it from file
         sm.userdata.jogstep = load_txt(PKG_PATH + 'data/JogStepSize.txt')
         sm.userdata.jogstep = sm.userdata.jogstep[0][0]

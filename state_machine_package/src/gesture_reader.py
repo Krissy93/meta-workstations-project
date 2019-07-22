@@ -7,7 +7,7 @@ import time
 
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
-
+import matplotlib as plt
 import numpy as np
 import cv2
 import sys
@@ -18,7 +18,7 @@ from state_machine_package.msg import commandRequest, commandResponse
 
 ##### MACROS DEFINITION
 
-PKG_PATH = '/home/optolab/smach_ws/src/state_machine_package/'
+PKG_PATH = '/home/eulero/projects/ros_ws/src/state_machine_package/'
 # frozen graph path
 PATH_TO_CKPT = PKG_PATH + 'network/RGB.pb'
 # labelmap path
@@ -193,6 +193,13 @@ class MessageUpdater():
             rospy.loginfo(color.BOLD + color.YELLOW + 'RECEIVED REQUEST NUMBER: ' + str(self.request.request_number) + color.END)
             self.received = True
 
+    def gamma_correction(self, gamma):
+        image = self.kinect.color_new
+        invGamma = 1.0 / gamma
+        table = np.array([((i / 255.0) ** invGamma) * 255
+            for i in np.arange(0, 256)]).astype("uint8")
+        self.kinect.color_new = cv2.LUT(image, table)
+
     def detect(self, sess):
         ''' Method to perform the actual inference on frames acquired from the
         Kinect object triggerd outside this function. To correctly display the frames
@@ -236,7 +243,7 @@ class MessageUpdater():
             if len(self.detection_list) > 0:
                 # I have at least one element in the list
                 if (self.detection_list.count(self.detection_list[0]) == len(self.detection_list)):
-                    if (len(self.detection_list) == 10):
+                    if (len(self.detection_list) == 7):
                         # send message if each element is the same and we have exactly 3 elements
                         # else it does nothing
                         self.correct = True
@@ -456,6 +463,7 @@ class MessageUpdater():
         while self.correct == False:
             # triggers the kinect to acquire a frame
             self.kinect.acquire()
+            #self.gamma_correction(0.6)
             # checks the request
             self.sub = rospy.Subscriber('/command_request', commandRequest, self.messageCallback, queue_size=1)
             # if new request has been correctly received, calls the detection function
