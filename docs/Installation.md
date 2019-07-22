@@ -70,7 +70,7 @@ If using a RealSense or other camera, install their dependencies (For the RealSe
     cd libfreenect2
     sudo apt-get install cmake pkg-config libusb-1.0-0-dev libturbojpeg libjpeg-turbo8-dev libglfw3-dev
     mkdir build && cd build
-    cmake .. -DENABLE_CXX11=ON -DCUDA_PROPAGATE_HOST_FLAGS=off
+    cmake .. -DENABLE_CXX11=ON -DCMAKE_C_COMPILER=/usr/bin/gcc-6 -DCUDA_PROPAGATE_HOST_FLAGS=off
     make
     make install
     echo '# ATTR{product}=="Kinect2"
