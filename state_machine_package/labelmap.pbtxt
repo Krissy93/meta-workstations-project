@@ -1,0 +1,116 @@
+item {
+  name: 'Punch_VFR'
+  id: 1
+}
+item {
+  name: 'Punch_VFL'
+  id: 2
+}
+item {
+  name: 'One_VFR'
+  id: 3
+}
+item {
+  name: 'One_VFL'
+  id: 4
+}
+item {
+  name: 'Two_VFR'
+  id: 5
+}
+item {
+  name: 'Two_VFL'
+  id: 6
+}
+item {
+  name: 'Three_VFR'
+  id: 7
+}
+item {
+  name: 'Three_VFL'
+  id: 8
+}
+item {
+  name: 'Four_VFR'
+  id: 9
+}
+item {
+  name: 'Four_VFL'
+  id: 10
+}
+item {
+  name: 'Five_VFR'
+  id: 11
+}
+item {
+  name: 'Five_VFL'
+  id: 12
+}
+item {
+  name: 'Six_VFR'
+  id: 13
+}
+item {
+  name: 'Six_VFL'
+  id: 14
+}
+item {
+  name: 'Seven_VFR'
+  id: 15
+}
+item {
+  name: 'Seven_VFL'
+  id: 16
+}
+item {
+  name: 'Eight_VFR'
+  id: 17
+}
+item {
+  name: 'Eight_VFL'
+  id: 18
+}
+item {
+  name: 'Nine_VFR'
+  id: 19
+}
+item {
+  name: 'Nine_VFL'
+  id: 20
+}
+item {
+  name: 'Span_VFR'
+  id: 21
+}
+item {
+  name: 'Span_VFL'
+  id: 22
+}
+item {
+  name: 'Horiz_HBL'
+  id: 23
+}
+item {
+  name: 'Horiz_HFL'
+  id: 24
+}
+item {
+  name: 'Horiz_HBR'
+  id: 25
+}
+item {
+  name: 'Horiz_HFR'
+  id: 26
+}
+item {
+  name: 'Collab'
+  id: 27
+}
+item {
+  name: 'XSign'
+  id: 28
+}
+item {
+  name: 'TimeOut'
+  id: 29
+}
