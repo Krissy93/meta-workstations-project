@@ -10,7 +10,8 @@ If you use this code for your research or find it useful, please cite it:
 ## Table of Contents
 - [Installation instructions](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Installation.md)
 - [Overview](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Overview.md)
-- [The code explained]
+- [The gestures Language](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Gestures%20Node.md)
+- [Points, Actions and Operations](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Movements%20Definition.md)
 
 ## Custom modules
 If you want to contribute adding custom modules and functionalities to the software, feel free to do so! Contact us if you need help or want to work with us by sending an e-mail to [Cristina Nuzzi](mailto:c.nuzzi@unibs.it).
