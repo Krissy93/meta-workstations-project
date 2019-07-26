@@ -6,11 +6,13 @@ The corresponding file is `gesture_reader.py`.
 The Node is based on Deep Learning to recognize the hand gestures in the image frames obtained from the camera.
 We fine-tuned an R-FCN Object Detector on our gestures dataset using the [TensorFlow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection). 
 
-We use a Kinect v2 camera as the image sensor, and read the frames by accessing the corresponding topics (i. e. `/kinect2/qhd/image_color_rect`).
-To do so we use a `KinectCameraSubscriber` class object.
+We use a Kinect v2 camera as the image sensor. To read the frames we can:
+- access the corresponding topics (i. e. `/kinect2/qhd/image_color_rect`) using `kinect2_bridge` and `libfreenect2`
+- use `pylibfreenect2` and directly access the Kinect without using a ROS bridge to do it.
+We choose to use the latter in this version to reduce the amount of ROS nodes and improve speed.
 
-Note that we usually consider the `_rect` topics only because our cameras are **intrinsecally calibrated**.
-Intrinsic calibration is needed to correct the distortion parameters of the camera, and correctly align the color information to the depth information obtained from the Kinect.
+NOTE: when using `kinect2_bridge` we usually consider the `_rect` topics because our cameras are **intrinsecally calibrated**.
+Intrinsic calibration is needed to correct the distortion parameters of the camera, and correctly align the color information to the depth information obtained from the Kinect (if you need it).
 It is not a required step, but is a good practice to obtain good quality data!
 
 After reading an image, this is sent to the frozen graph we trained on our dataset.
@@ -19,7 +21,11 @@ The prediction contains:
 - The _box coordinates_ of each hand gestures recognized in the picture;
 - The _object class_ of each hand gesture;
 - The _confidence score_ of each hand gesture.
-We filter out predictions with confidence score **lower than 80%** as a safety measure, since Object Detectors are noisy (meaning that they tend to recognize a lot of objects in the image, usually wrong).
+
+We filter out predictions as a safety measure, since Object Detectors are noisy (meaning that they tend to recognize a lot of objects in the image, usually wrong). The filtering procedure is the following:
+- if we read more than 2 gestures, only the ones with maximum score are retained;
+- we check the gesture labels obtained according to the `/command_request` received from the State Machine node. This also filters out same hand gestures automatically;
+- if the pair survived the filtering, we store its numerical command value in a vector. If this vector is filled up with the same unique numerical values up to a certain threshold (good values are from 7 to 10), the composed gesture is valid and is written in the `/command_response` topic. Basically this assures that the same gesture is read from 7 to 10 times consecutively without a wrong gesture reading in-between.
 
 ## Gestures
 We defined a set of single-hand gestures as represented in the figure.
