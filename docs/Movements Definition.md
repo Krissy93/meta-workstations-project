@@ -12,7 +12,7 @@ Simple actions are useful to compose more complex workflows, but are robot and s
 ## Point Definition
 The corresponding files are [SPoints](https://github.com/Krissy93/meta-workstations-project/blob/master/state_machine_package/data/SPoints.txt) and [QPoints](https://github.com/Krissy93/meta-workstations-project/blob/master/state_machine_package/data/QPoints.txt).
 SPoints are saved in their XYZ-Orientation cartesian positions. These can be read and elaborated in the Points Definition State, in order to transform them in Joint State positions according to the robot at hand. To do so, one must modify the [Robot.py](https://github.com/Krissy93/meta-workstations-project/blob/master/state_machine_package/src/robot.py) file with the correct Robot structure and operative angles for each joint, in order to obtain the correct Direct and Inverse Kinematic functions.
-One can also simply add a QPoint simply by reading the `/joint_state` position of the robot and add it to the list.
+One can also add a QPoint simply by reading the `/joint_state` position of the robot and add it to the list.
 
 SPoints are defined following this structure:
 ```
@@ -25,7 +25,7 @@ POINT_NAME  JOINT1 JOINT2 ... JOINTN
 Be careful: the only separator between values is the space!!
 
 ## Action Definition
-Actions are defined in the [actions_library](https://github.com/Krissy93/meta-workstations-project/blob/master/state_machine_package/src/actions_library.py) file. It is a python file imported in the State Machine Node, and contains several action functions.
+Actions are defined in the [actions_library](https://github.com/Krissy93/meta-workstations-project/blob/master/state_machine_package/src/actions_library.py) file. It's a python file imported in the State Machine Node, and contains several action functions.
 Actions are defined in a parametric way, allowing the user to call a generic action with the parameters needed at that time.
 To add a new action, simply add the corresponding function to the python file.
 
