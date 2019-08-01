@@ -5,7 +5,7 @@ This basically is what users usually do when programming a robot for a specific 
 
 Because of this, we defined three main types of hard-code movement definitions:
 - **POINT DEFINITION:** where the user simply adds a point coordinate to a list of points;
-- **ACTION DEFINITION:** where the user defines a set of operations that compose a more complex instruction, i. e. to take a specific object one must specify where to move the end effector, how to open the gripper, how to take the object with the gripper, etc.
+- **ACTION DEFINITION:** where the user defines a set of actions that compose a more complex operation, i. e. to take a specific object one must specify where to move the end effector, how to open the gripper, how to take the object with the gripper, etc.
 Simple actions are useful to compose more complex workflows, but are robot and set-up dependant;
 - **OPERATION DEFINITION:** operations are a complete workflow composed of a set of simple actions. These are defined by calling the specific simple action in the correct time of the workflow.
 
