@@ -3,6 +3,18 @@ Welcome to the repository of the Meta Workstation Project of Vis4Mechs, Universi
 The project aims at developing a ROS-based structure to interact with both Industrial Robots and Collaborative Robots using smart modules. The system is an open source alternative to traditional robot programming methods, and requires little training to be used effectively.
 
 If you use this code for your research or find it useful, please cite it:
+```
+@InProceedings{10.1007/978-3-030-30754-7_33,
+author="Nuzzi, Cristina and Pasinetti, Simone and Pagani, Roberto and Docchio, Franco and Sansoni, Giovanna",
+editor="Cristani, Marco and Prati, Andrea and Lanz, Oswald and Messelodi, Stefano and Sebe, Nicu",
+title="Hand Gesture Recognition for Collaborative Workstations: A Smart Command System Prototype",
+booktitle="New Trends in Image Analysis and Processing -- ICIAP 2019",
+year="2019",
+publisher="Springer International Publishing",
+address="Cham",
+pages="332--342",
+isbn="978-3-030-30754-7"}
+```
 
 ## Maintainers
 - Cristina Nuzzi, [Krissy93](https://github.com/Krissy93)
