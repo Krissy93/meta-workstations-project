@@ -1,239 +1,71 @@
 #!/usr/bin/env python
 
 import rospy
-from robot import *
 from utils import *
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from sensor_msgs.msg import JointState
-from std_srvs.srv import SetBool
+import os
+import shutil
+import codecs
 
-PKG_PATH = '/home/eulero/projects/ros_ws/src/state_machine_package/'
+def translate_operation(pkg_path, action_list):
+    ''' Used to translate actions saved in a list.
+    The list is created during the pick and place state execution.
+    Every action taken is saved in a list of tuples (action number, point),
+    if no point is assigned to the action, the point is saved as "None".
 
-def op_list():
-    """ Prints all the available operations present in this file. """
+    If the user wants to save the sequence of actions in an operation file,
+    this function reads from the Operations directory the number of operation files,
+    then assigns to the new file a base name and the current date.
+    '''
+    BASENAME = '/operations/operation_'
+    INDENT = '    '
+    # finds the directory "operations" and creates the base name of the new file.
+    # pkg_path = rospkg.RosPack().get_path('state_machine_package')
 
-    rospy.loginfo(color.BOLD + color.PURPLE + '|----------------------|' + color.END)
-    rospy.loginfo(color.BOLD + color.PURPLE + '| AVAILABLE OPERATIONS |' + color.END)
-    rospy.loginfo(color.BOLD + color.PURPLE + '| 1: MOKA EVAL TEST    |' + color.END)
-    rospy.loginfo(color.BOLD + color.PURPLE + '|----------------------|' + color.END)
+    # creates name of new file according to the current date
+    date = time.strftime(r"%d-%m-%Y-%H:%M:%S", time.localtime())
+    filename = BASENAME + date + '.py'
+    # copies empty.py file in the new directory with the new name
+    shutil.copy(pkg_path + '/data/empty.py', pkg_path + filename)
 
-    operations = ['MOKA']
+    with codecs.open(pkg_path + filename, "a", encoding="utf-8-sig") as file:
+        file.write('\n\n' + INDENT + '# START OF AUTO-WRITTEN PORTION')
 
-    return operations
-    
-def check_feed(self, gripper):
-    goal = False
-    while (goal == False):
-        if gripper == 0:
-            # until goal not reached, checks the feedback topic
-            self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
-        else:
-            # if the action is a gripper one, sets the goal to true automatically
-            goal = True
-     return goal
+        # append to file portions of txt according to the saved action
+        for i in range(0,len(action_list)):
+            current_action = action_list[i][0]
+            if current_action == 2:
+                # writes open gripper action
+                file.write('\n\n' + INDENT + 'control_gripper(1)')
+            elif current_action == 3:
+                # close gripper action
+                file.write('\n\n' + INDENT + 'control_gripper(-1)')
+            elif current_action == 1:
+                # write the move to point action according to the point saved
+                # write: move_to_point(pub, action_list[i][1], empty, empty)
+                file.write('\n\n' + INDENT + 'move_to_point(self.pub, self.trajectory, ' + str(action_list[i][1]) + ', self.empty, self.empty)')
 
-def moka_evaluation_op(pub, trajectory, empty):
-    """ Loads the XYZ points file and calculates the joints coordinates according
-    to the robot-dependant inverse kinematic function. This function is defined in robot.py """
+            # before going further, writes the feedback while loop
+            if current_action != 2 and current_action != 3:
+                # until goal not reached, checks the feedback topic
+                file.write('\n\n' + INDENT + 'self.goal = False')
+                file.write('\n' + INDENT + 'while (self.goal == False):')
+                file.write('\n' + INDENT + INDENT + 'self.trajsub = rospy.Subscriber(ROBOT_FEEDBACK, JointState, self.feedbackCallback, queue_size = 1)')
+                file.write('\n' + INDENT + INDENT + 'if self.goal == True:')
+                file.write('\n' + INDENT + INDENT + INDENT + 'rospy.loginfo(color.BOLD + color.YELLOW + \'-- POSITION REACHED --\' + color.END)')
 
-    # loads the Qpoints file
-    file = load_txt(PKG_PATH + 'data/QPoints.txt')
-    names, points = load_points(file)
-    rospy.loginfo(color.BOLD + color.YELLOW + '-- POINTS LOADED -- + color.END)
-   
-    #### MOVES TO BASE POSITION ####
-    move_to_point(pub, trajectory, points[0], empty, empty, empty)
+    rospy.loginfo(color.BOLD + color.GREEN + '-- OPERATION FILE WRITTEN IN: ' + filename + ' --' + color.END)
 
-    #### OPENS THE GRIPPER ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # opens gripper now
-        control_gripper(1)
-    else:
-        return ERROR
-        
-    #### MOVES TO FIRST POSITION ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to second point (reaches the object)
-        move_to_point(pub, trajectory, points[1], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### GOES DOWN A BIT TO PICK THE OBJECT CORRECTLY ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to second point (reaches the object)
-        move_to_point(pub, trajectory, points[2], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### CLOSES THE GRIPPER TO PICK UP THE OBJECT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # closes the gripper and takes up the object
-        control_gripper(0)
-    else:
-        return ERROR
-        
-    #### MOVES TO "RELEASE" POSITION ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to third point (reaches the pick down object point)
-        move_to_point(pub, trajectory, points[3], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### GOES DOWN A BIT TO RELEASE OBJECT SMOOTHLY ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        move_to_point(pub, trajectory, points[4], empty, empty, empty) ##########
-    else:
-        return ERROR
-        
-    #### OPENS GRIPPER TO RELEASE OBJECT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # opens gripper now to release object
-        control_gripper(1)
-    else:
-        return ERROR
-        
-    #### GOES UP A BIT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        move_to_point(pub, trajectory, points[4], empty, empty, empty) ##########
-    else:
-        return ERROR
-        
-    #### MOVES TO SECOND OBJECT POSITION ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to fourth point
-        move_to_point(pub, trajectory, points[4], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### MOVES DOWN TO PICK UP OBJECT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to fifth point
-        move_to_point(pub, trajectory, points[5], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### CLOSES GRIPPER TO PICK UP OBJECT (OPENED ALREADY) ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # closes gripper now
-        control_gripper(0)
-    else:
-        return ERROR
-        
-    #### MOVES TO "RELEASE" POSITION ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to third point (reaches the pick down object point)
-        move_to_point(pub, trajectory, points[3], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### MOVES DOWN A BIT TO RELEASE OBJECT SMOOTHLY ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to sixth point
-        move_to_point(pub, trajectory, points[6], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### OPENS GRIPPER TO RELEASE OBJECT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # opens gripper now
-        control_gripper(1)
-    else:
-        return ERROR
-        
-    #### GOES UP A BIT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        move_to_point(pub, trajectory, points[4], empty, empty, empty) ##########
-    else:
-        return ERROR
-        
-    #### MOVES TO THIRD OBJECT POSITION ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to seventh point
-        move_to_point(pub, trajectory, points[7], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### MOVES DOWN TO PICK UP OBJECT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to seventh point
-        move_to_point(pub, trajectory, points[7], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### CLOSES GRIPPER TO PICK UP OBJECT (OPENED ALREADY) ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # closes gripper now
-        control_gripper(0)
-    else:
-        return ERROR
-        
-    #### MOVES TO "RELEASE" POSITION ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to third point (reaches the pick down object point)
-        move_to_point(pub, trajectory, points[3], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### MOVES DOWN A BIT TO RELEASE OBJECT SMOOTHLY ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # moves to sixth point
-        move_to_point(pub, trajectory, points[6], empty, empty, empty)
-    else:
-        return ERROR
-        
-    #### OPENS GRIPPER TO RELEASE OBJECT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        # opens gripper now
-        control_gripper(1)
-    else:
-        return ERROR
-        
-    #### GOES UP TO LET OPERATOR ASSEMBLE OBJECT ####
-    goal = False
-    goal = check_feed(self, 0)
-    if goal == True:
-        move_to_point(pub, trajectory, points[4], empty, empty, empty) ##########
-    else:
-        return ERROR
+def init_operations(pkg_path):
+    ''' Loads all the files in the operations folder and returns the list of files
+    with their corresponding path. By doing this, the user can select each file using the
+    filename as handler and execute it '''
+
+    BASENAME = '/operations/operation_'
+    # finds the directory "operations" and creates the base name of the new file.
+
+    # creates a list of file paths contained in the operations folder of the package.
+    files = filter(os.path.isfile, glob.glob(pkg_path + '/operations/' + "*.py"))
+    # orders them according to modification date. Last modifified items are at the bottom of the list
+    files.sort(key=lambda x: os.path.getmtime(x))
+
+    return files

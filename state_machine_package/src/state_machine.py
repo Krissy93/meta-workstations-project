@@ -1,22 +1,28 @@
 #!/usr/bin/env python
 
 import rospy
+import rospkg
 import smach
 import smach_ros
 import sys
 import time
 import subprocess
 from state_machine_package.msg import commandRequest, commandResponse
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from trajectory_msgs.msg import JointTrajectory
 from sensor_msgs.msg import JointState
 import threading
 import traceback
 from utils import *
 from actions_library import *
+from operations_library import *
 
 ########### DEFINITION OF MACRO ###########
 
-PKG_PATH = '/home/eulero/projects/ros_ws/src/state_machine_package/'
+PKG_PATH = rospkg.RosPack().get_path('state_machine_package')
+REQUEST_TOPIC = '/command_request'
+RESPONSE_TOPIC = '/command_response'
+ROBOT_PUB = '/joint_state_pose'
+ROBOT_FEEDBACK = '/joint_states'
 start_execution = time.time()
 
 ########### STATE MACHINE BASIC CLASSES DEFINITION ###########
@@ -43,11 +49,10 @@ class State(smach.State):
         self.statename = 'None'
         self.sub = 0
         self.trajsub = 0
-        self.pub = rospy.Publisher('/command_request', commandRequest, queue_size = 1)
-        #self.trajpub = rospy.Publisher('/joint_path_command', JointTrajectory, queue_size = 1, latch=True)
-        self.trajpub = rospy.Publisher('/joint_state_pose', JointState, queue_size = 1, latch=True)
+        self.pub = rospy.Publisher(REQUEST_TOPIC, commandRequest, queue_size = 1)
+        self.trajpub = rospy.Publisher(ROBOT_PUB, JointTrajectory, queue_size = 1, latch=True)
         self.request = commandRequest()
-        self.trajectory = JointState()
+        self.trajectory = JointTrajectory()
         # basic empty vector useful for initialization of velocities accelerations and effort
         # it is a vector of 10 elemets, which is the maximum. It is okay because messages
         # are created based on the position vector, which is robot dependant
@@ -70,7 +75,7 @@ class State(smach.State):
             elif msg.request_type == 'change_state':
                 self.nextstate = new
 
-    def feedbackCallback2(self, msg):
+    def feedbackCallback(self, msg):
         """ Callback function that reads the feedback written by the robot in the feedback topic.
         Be careful since the feedback is written continuosly, so the trick with the stamp to align
         the messages do not work. In this case it is better to check here if the feedback received
@@ -101,37 +106,6 @@ class State(smach.State):
         # regardless of the goal, it updates the position according to what is read on the topic
         self.last_position = msg.position
 
-    def feedbackCallback(self, msg):
-        """ Callback function that reads the feedback written by the robot in the feedback topic.
-        Be careful since the feedback is written continuosly, so the trick with the stamp to align
-        the messages do not work. In this case it is better to check here if the feedback received
-        corresponds to the theoretical position the system is waiting for.
-
-        std_msgs/Header header
-            uint32 seq
-            time stamp
-            string frame_id
-        string[] name
-        float64[] position
-        float64[] velocity
-        float64[] effort"""
-
-        # to know if the robot reached the goal, the callback must check
-        # if the position obtained from the feedback (msg.position) has a value
-        # between the theoretical position +- 0.01 radiants. This is a safety measure
-        # because it is nearly impossible to reach the theoretical position requested
-        # so an approximation is needed
-        if (msg.position[0] >= self.trajectory.position[0] - 0.01) and (msg.position[0] <= self.trajectory.position[0] + 0.01):
-        #print(self.trajectory.points[0].positions)
-        #if (msg.position[0] == 888) and (msg.position[1] >= self.trajectory.points[0].positions[1] - 0.01) and (msg.position[1] <= self.trajectory.points[0].positions[1] + 0.01):
-            # if the two positions are almost equal, it means that the robot
-            # has reached the goal of the last message. Sets the goal to true
-            self.goal = True
-        else:
-            self.goal = False
-        # regardless of the goal, it updates the position according to what is read on the topic
-        self.last_position = msg.position
-
     def reset(self):
         """ Debug method that resets variables. """
 
@@ -152,6 +126,8 @@ class State(smach.State):
         self.reset()
         self.request.request_number = self.request.request_number + 1
         self.request.request_type = type
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
 
     def confirm(self):
@@ -166,11 +142,13 @@ class State(smach.State):
         self.request.request_number = self.request.request_number + 1
         self.request.request_type = 'interface_command'
         # request sent: waits for confirm/cancel/delete
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
 
         while self.command == -1:
             # reads the response topic and waits for the correct response to appear
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.stateCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
 
             if self.command == -3:
                 # cancels the inserted command. After this command, the state machine exits the "confirm"
@@ -242,6 +220,8 @@ class InstructionState(State):
         self.reset()
         self.request.request_number = self.request.request_number + 1
         self.request.request_type = type
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
 
     def confirmInstruction(self, name):
@@ -254,12 +234,14 @@ class InstructionState(State):
         # updates request number and type, since it waits for a confirmation command to confirm the instruction
         self.request.request_number = self.request.request_number + 1
         self.request.request_type = 'interface_command'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         # request sent: waits for confirm/cancel/delete
         self.pub.publish(self.request)
 
         while self.command == -1:
             # reads the response topic and waits for the correct response to appear
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.stateCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
 
             if self.command == -3:
                 # cancels the inserted command. After this command, the state machine exits the "confirmInstruction"
@@ -283,15 +265,11 @@ class InstructionState(State):
         """ Method to create the instruction.
         It can only read NUMBERS and the GO instruction """
 
-        self.instruction = -1
-        #self.checkvalues()
-        self.request.request_number = self.request.request_number + 1
-        self.request.request_type = 'instruction_command'
-        self.pub.publish(self.request)
+        self.update('instruction_command')
 
         while self.instruction == -1:
             # it can read every numerical instruction. Numbers are defined between 1000 and 1009
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.instructionCallback, queue_size = 1)
 
             # if it reads a number or the GO instruction then it can perform some actions
             if (self.instruction > 999) or (self.instruction == 0):
@@ -339,14 +317,17 @@ class InstructionState(State):
         self.instruction = -1
         self.request.request_number = self.request.request_number + 1
         self.request.request_type = 'jog_command'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
+
 
         while self.instruction == -1:
             # it can read every numerical instruction. Jog commands follow a different rule,
             # these are numbers > 10000 defined as 10[0joint][0/1/-1] to represent a jog command,
             # which joint to select and if the command is to stop, increase or decrease position.
 
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.instructionCallback, queue_size = 1)
 
             if (self.instruction > 10000):
                 # if it reads a jog instruction prints a debug info
@@ -397,6 +378,8 @@ class ReadyState(State):
         # from this state the only action possible is to change the state or close communication,
         # thus the request type is initialized as "change state"
         self.request.request_type = 'change_state'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         # sleep is needed to correctly send the request in the topic,
         # since at startup it may not be already up if the user is fast and already sends a command
         time.sleep(1)
@@ -405,7 +388,7 @@ class ReadyState(State):
 
         while self.nextstate == -1:
             # waits for the correct command according to the request number sent before
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.stateCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
 
             if self.nextstate == 0:
                 self.statename = 'HOME'
@@ -458,8 +441,8 @@ class Home(State):
         """ Method called at the startup of the state, to present the user the command list available. """
 
         rospy.loginfo(color.BOLD + color.PURPLE + '|           COMMAND LIST           |' + color.END)
-        rospy.loginfo(color.BOLD + color.PURPLE + '|-5: GO TO POINTS DEFINITION STATE |' + color.END)
-        rospy.loginfo(color.BOLD + color.PURPLE + '| 1: GO TO LOOP DEFINITION STATE   |' + color.END)
+        #rospy.loginfo(color.BOLD + color.PURPLE + '|-5: GO TO POINTS DEFINITION STATE |' + color.END)
+        rospy.loginfo(color.BOLD + color.PURPLE + '| 1: GO TO LOOP STATE              |' + color.END)
         rospy.loginfo(color.BOLD + color.PURPLE + '| 2: GO TO PICK AND PLACE STATE    |' + color.END)
         rospy.loginfo(color.BOLD + color.PURPLE + '| 3: GO TO JOG STATE               |' + color.END)
         rospy.loginfo(color.BOLD + color.PURPLE + '| 4: GO TO SET MOTOR SPEED STATE   |' + color.END)
@@ -477,11 +460,13 @@ class Home(State):
         # from this state the only action available is to change state or exit,
         # thus the command type is a change state one.
         self.request.request_type = 'change_state'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
 
         while self.nextstate == -1:
             # waits for the correct command according to the request number sent before
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.stateCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
 
             if self.nextstate == -5:
                 # chooses the point definition state
@@ -627,11 +612,12 @@ class PointsDef(State):
     def execute(self, userdata):
         self.statename = 'POINTS DEFINITION STATE'
         rospy.loginfo(color.BOLD + color.CYAN + '[STATE 1: ' + self.statename + ']' + color.END)
+        rospy.loginfo(color.BOLD + color.YELLOW + '-- WARNING: THE POINTS WILL BE RECALCULATED BASED ON THE ROBOT KINEMATICS. CHECK IF THEY ARE UP TO DATE! --' + color.END)
 
         # it uses a bunch of functions imported from utils.
         rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING XYZ POINTS FILE --' + color.END)
         # launches the gedit terminal command to open the file. It is statically defined here
-        return_code = subprocess.call("gedit " + PKG_PATH + "data/SPoints.txt", shell=True)
+        return_code = subprocess.call("gedit " + PKG_PATH + "/data/SPoints.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE! --' + color.END)
         # after modifiying, it loads the contents of the file into memory. S points are in XYZ coordinates
         QQ = init_points()
@@ -676,11 +662,13 @@ class Loop(State):
         # from this state the only action available is to change state or exit,
         # thus the command type is a change state one. This is because the real "action" states are the sub states
         self.request.request_type = 'change_state'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
 
         while self.nextstate == -1:
             # waits for the correct command according to the request number sent before
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.stateCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
 
             if self.nextstate == -5:
                 # first sub state selected, the trajectory file can be changed easily
@@ -751,12 +739,12 @@ class LoopTrajectory(State):
         State.__init__(self, transitions, input, output)
 
     def execute(self, userdata):
-        self.statename = 'CHANGE TRAJECTORY FILE'
+        self.statename = 'CHANGE OPERATIONS FILE'
         rospy.loginfo(color.BOLD + color.CYAN + '[LOOP STATE 1: ' + self.statename + ']' + color.END)
 
-        rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING TRAJECTORY FILE --' + color.END)
+        rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING OPERATIONS FILE --' + color.END)
         # launches the gedit terminal command to open the file. It is statically defined here
-        return_code = subprocess.call("gedit " + PKG_PATH + "data/SPoints.txt", shell=True)
+        return_code = subprocess.call("gedit " + PKG_PATH + "/data/SPoints.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE! --' + color.END)
         ########################## EDIT RICHIESTO QUI
         # returns home automatically after these operations are concluded.
@@ -769,7 +757,7 @@ class LoopTrajectory(State):
 
 
 '''TO DO: SISTEMARE COMPLETAMENTE'''
-class LoopRun(InstructionState):
+class Loop(InstructionState):
     ''' Loop state. The operator selects the operation to be executed from a list of
     available operations, loads it into memory then says to the robot how many times it
     must execute the loop. It can be paused or stopped in the time between the sending of packets.
@@ -778,150 +766,245 @@ class LoopRun(InstructionState):
     def __init__(self, transitions=['tLoop'], input=['input', 'oldstate', 'velocity', 'jogstep'], output=['output', 'oldstate', 'velocity', 'jogstep']):
         InstructionState.__init__(self, transitions, input, output)
 
-    def execute(self, userdata):
-        # when executed, initializes the variables calling the reset method
-        self.statename = 'START CYCLE' #TO DO: DA INSERIRE IL COMANDO DI PAUSA!! POTREI FARLO ANDARE IN UN ALTRO STATO
-        self.reset()
-        # the request number do not need to be updated here
-        self.request.request_number = userdata.input
+    def listCommands(self):
+        """ Method called at the startup of the state, to present the user the command list available. """
 
-        # loads the operations file. The file contains the names of the operations in the first column, and the paths in the second column
-        operationfile = load_txt(PKG_PATH + 'data/Operations.txt')
+        rospy.loginfo(color.BOLD + color.PURPLE + '|             COMMAND LIST             |' + color.END)
+        rospy.loginfo(color.BOLD + color.PURPLE + '|-5: ADD ANOTHER OPERATION TO THE LOOP |' + color.END)
+        rospy.loginfo(color.BOLD + color.PURPLE + '| 0: SEND THE OPERATION TO ROBOT       |' + color.END)
+        rospy.loginfo(color.BOLD + color.PURPLE + '|-2: RETURN HOME                       |' + color.END)
+
+    def select_operation(self, current_operations):
+        ''' Method called whenever a new operation is added to the loop. '''
+
         rospy.loginfo(color.BOLD + color.CYAN + 'CHOOSE EXISTING OPERATION FROM LIST:' + color.END)
         # prints the available operations from the file, so that the user can select one. The corresponding operation
         # is then loaded from its personal file which contains every detail of the execution
-        for i in range(0,len(operationfile)):
-            rospy.loginfo(color.BOLD + color.YELLOW + '| OP. ' + str(i) + ': ' + str(operationfile[i]) + ' |' + color.END)
-            #TO DO: qui e' da sistemare perche' una operazione contiene una serie di punti e parametri che determinano la sua esecuzione da inizio e fine
-            # nel file operations invece salvo solo gli header che determinano il nome del file di riferimento nel quale e' salvata l'operazione
-            # e che verra' caricato di conseguenza quando selezionato
+        for i in range(0,len(current_operations)):
+            rospy.loginfo(color.BOLD + color.YELLOW + '| FILE ' + str(i) + ': ' + str(os.path.basename(current_operations[i])) + ' |' + color.END)
 
         # asks the user to select an operation, thus a numeric command + GO is needed
-        self.instruction()
+        self.getInstruction()
+        # while loops are managed inside the method, no need to call them outside
+        # a bunch of ifs are enough
 
         if self.instruction > 999:
             # if a numerical command has been obtained, it is saved and used to select
-            # the operation from the list. "traj" corresponds to the row number of the file.
-            # the file contains at row traj in position 0 the name of the operation,
-            # in position 1 the path of the corresponding trajectory definition file
+            # the operation from the list. "traj" corresponds to the row number of the file
             traj = self.instruction
             # asks the user how many times the operation must be executed
             rospy.loginfo(color.BOLD + color.CYAN + 'HOW MANY REPETITIONS?' + color.END)
-            self.instruction()
+            self.getInstruction()
 
             if self.instruction > 999:
                 # another numerical command is needed here to select the number of repetitions
                 # since numbers are defined as > 999, to obtain the single number we need to
                 # subtract 1000. Remember that 999 = go and 1000+ are the numbers
                 cycles = self.instruction - 1000
-                rospy.loginfo(color.BOLD + color.CYAN + 'OK! READY TO SEND THIS INSTRUCTION?' + color.END)
+                rospy.loginfo(color.BOLD + color.CYAN + 'YOUR SELECTED OPERATION LOOP IS:' + color.END)
                 # plots the recap of the composed action obtained so far.
-                rospy.loginfo(color.BOLD + color.YELLOW + 'OPERATION: ' + str(operationfile[traj][0]) + ', REPEAT FOR: ' + str(cycles) + ' TIMES.' + color.END)
-                self.instruction()
-                # asks the user to confirm the recap. if so, it loads the corresponding trajectory file and starts the execution
+                rospy.loginfo(color.BOLD + color.YELLOW + 'OPERATION FILE: ' + str(os.path.basename(current_operations[i])) + ', REPEAT FOR: ' + str(cycles) + ' TIMES.' + color.END)
 
-                if self.instruction == 0:
-                    # sets the goal to false
-                    goal_reached = False
-                    trajectory_file = load_txt(str(operationfile[traj][1]))
-                    rospy.loginfo(color.BOLD + color.GREEN + '-- SENDING COMMAND TO ROBOT --' + color.END)
-                    # TO DO: se il file della traiettoria e' fatto bene dovrebbe contenere gia' di suo le posizioni
-                    # e i vari step che il robot deve eseguire, quindi basta mandarle in un loop... o forse basta in blocco? chiedi a paga
-                    # TO DO: INVIA IL COMANDO
-                    # POI ESCE E TORNA IN CYCLE QUANDO MI ARRIVA LA RISPOSTA DAL DRIVER (SONO ARRIVATO)?
-                    # TO DO: pubblica il comando traj + cycles per il driver
-                    # devo chiamare la funzione di cinematica?
-                    # a questo punto aspetto che il driver mi dica che ha finito il ciclo;
-                    # e continuo a leggere su commands in un loop in attesa del comando di pausa o di stop
+        return (traj, cycles)
 
-                    # sends the request to be able to wait for a stop or pause command
-                    self.request.request_number = self.request.request_number + 1
-                    self.request.request_type = 'change_state'
-                    self.pub.publish(self.request)
+    def execute(self, userdata):
+        # when executed, initializes the variables calling the reset method
+        self.statename = 'LOOP STATE'
+        self.reset()
+        # the request number do not need to be updated here
+        self.request.request_number = userdata.input
+        operation_list = []
 
-                    # checks the topic until the execution is not finished
-                    while goal_reached == False:
-                        self.sub = rospy.Subscriber('/command_response', commandResponse, self.stateCallback, queue_size = 1)
-                        if self.nextstate == -2:
-                            # if a stop command is given, the robot must stop the execution and return in the ReadyState
-                            #TO DO: pubblica il messaggio di stop per il robot e torna in stato 0
-                            rospy.loginfo(color.BOLD + color.RED + '-- ROBOT STOPPED --' + color.END)
-                            self.statename = 'INITIAL STATE'
-                            rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
-                            userdata.output = self.request.request_number
-                            userdata.oldstate = 'START LOOP STATE'
-                            return 'tState0'
-                        elif self.nextstate == -4:
-                            # if a pause command is given, the robot must stop the execution until a go command is not given afterwards.
-                            # it needs to stay inside the while loop until this happens!
-                            # TO DO: manda un comando di stop al driver, ma poi rimane nel while del goal perche' non c'e' goal reached
-                            rospy.loginfo(color.BOLD + color.YELLOW + '-- EXECUTION PAUSED --' + color.END)
+        # initializes the existing operations contained in the operations folder of the package.
+        current_operations = init_operations(PKG_PATH)
+        # calls the method to add a new operation file + number of repetitions to the list
+        # the pair (operation, repetitions) is added to operation_list
+        pair = self.select_operation(current_operations)
+        operation_list.append(pair)
 
-                            # resets some variables, cannot use the reset method here
-                            self.command = -1
-                            self.instruction = -1
-                            # asks for a new command, in this case the go command to resume the operation
-                            self.request.request_number = self.request.request_number + 1
-                            self.request.request_type = 'instruction_command'
-                            self.pub.publish(self.request)
-                            # this while continues until a "GO" command is not given and confirmed (instruction and command both = 0)
-                            while not (self.instruction == 0 and self.command == 0):
-                                self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
-                                if self.instruction == 0:
-                                    # if it reads a "go" asks for a confirm
-                                    self.confirmInstruction('[GO]')
-                                    # exits the while loop only if after this call command is == 0, otherwhise it keeps waiting
-                                    if self.command != 0:
-                                        rospy.loginfo(color.BOLD + color.RED + '-- NOT CONFIRMED, STILL PAUSED --' + color.END)
-                                    else:
-                                        break
-                                if self.instruction == -2 or self.command == -2:
-                                    # if somehow the exit command is given, it exits the state
-                                    self.statename = 'LOOP STATE'
-                                    rospy.loginfo(color.BOLD + color.RED + '-- EXECUTION CANCELLED, RETURNING TO ' + self.statename + ' --' + color.END)
-                                    userdata.output = self.request.request_number
-                                    userdata.oldstate = 'START LOOP STATE'
-                                    return 'tLoop'
+        # asks the user if it wants to add another operation to the loop or just send the loop as it is
+        self.listCommands()
+        # updates the variables and publishes a new request
+        self.update('loop')
 
-                            # if the program reaches this point, it means that it has exited the pause while loop, thus the execution can continue.
-                            # remember that we are still in the main while loop, which ends only if the goal is reached; thus after this loginfo
-                            # it simply restart the checks of the main while loop and keeps sending the trajectory packets to the robot
-                            rospy.loginfo(color.BOLD + color.YELLOW + '-- CONTINUE EXECUTION --' + color.END)
-                        elif goal_reached == True: #GOAL REACHED, me lo pubblica il driver come numero se finisce l'esecuzione
-                            rospy.loginfo(color.BOLD + color.GREEN + '-- DONE! --' + color.END)
-                        else: #significa che non legge comandi di interrupt vari quindi puo' continuare a inviare il resto dei pacchetti
-                            # TO DO: continua l'invio (come aveva fatto rossano?)
-                            dummy = 1 #istruzione a caso stupida per riempire senno' da' errore
+        while self.nextstate == -1:
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
 
-                    self.statename = 'LOOP STATE'
-                    rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
+            if self.nextstate == -5:
+                # user selected to add a new operation to the loop.
+                self.statename = 'ADD NEW OPERATION'
+                self.confirm()
+                # check interface
+                if self.command == 0:
+                    # user confirmed the value
+                    pair = self.select_operation(current_operations)
+                    operation_list.append(pair)
+                    # asks the user if it wants to add another operation to the loop or just send the loop as it is
+                    self.listCommands()
+                    # updates the variables and publishes a new request
+                    self.update('loop')
+                elif self.command == -2:
+                    # exits state
+                    self.nextstate = -2
+                    break
+                else:
+                    # inserted delete, need to update
+                    self.listCommands()
+                    self.update('loop')
+
+            elif self.nextstate == 0:
+                # user wants to send the composed loop sequence to the robot.
+                # programming phase ends here, move to LoopRun state to manage everything smoothly
+                self.statename = 'LAUNCH COMPOSED LOOP'
+                self.confirm()
+
+                if self.command == 0:
+                    rospy.loginfo(color.BOLD + color.RED + '-- MOVING TO ' + self.statename + ' --' + color.END)
                     userdata.output = self.request.request_number
-                    userdata.oldstate = 'START LOOP STATE'
-                    return 'tLoop'
-                else: #e' uscito -2
-                    rospy.loginfo(color.BOLD + color.RED + '-- OPERATION CANCELLED --' + color.END)
-                    userdata.output = self.request.request_number
-                    userdata.oldstate = 'START LOOP STATE'
-                    return 'tLoop'
+                    userdata.oldstate = 'JOG MODE STATE'
+                    return 'tHome'
+                elif self.command == -2:
+                    # breaks
+                    self.nextstate = -2
+                    break
+                else:
+                    # inserted delete, need to update
+                    self.listCommands()
+                    self.update('loop')
+
+            elif self.nextstate == -2:
+                break
+
+            else:
+                # just waits for the subscriber to read something useful
+                self.nextstate = -1
+
+        # these commands are only executed if nextstate = -2, since it exits the while loop only in this case.
+        # Returns to the home state and updates variables (useful for debug)
+        self.statename = 'HOME STATE'
+        rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
+        userdata.output = self.request.request_number
+        userdata.oldstate = 'JOG MODE STATE'
+        return 'tHome'
 
 
-            else: # e' uscito -2
-                # annulla il comando e torna al main dello stato
-                rospy.loginfo(color.BOLD + color.RED + '-- OPERATION CANCELLED --' + color.END)
+# TO DOOOOOOO come gli passo la lista di robe?
+class LoopRun(InstructionState):
+    ''' Used to execute the given operations selected in the previous state.
+    Useful in a separated state in order to debug it easily. '''
+
+    def __init__(self, transitions=['tLoop'], input=['input', 'oldstate', 'velocity', 'jogstep'], output=['output', 'oldstate', 'velocity', 'jogstep']):
+        InstructionState.__init__(self, transitions, input, output)
+
+
+    self.getInstruction()
+    # asks the user to confirm the recap. if so, it loads the corresponding trajectory file and starts the execution
+
+    if self.instruction == 0:
+        # sets the goal to false
+        goal_reached = False
+        trajectory_file = load_txt(str(operationfile[traj][1]))
+        rospy.loginfo(color.BOLD + color.GREEN + '-- SENDING COMMAND TO ROBOT --' + color.END)
+        # TO DO: se il file della traiettoria e' fatto bene dovrebbe contenere gia' di suo le posizioni
+        # e i vari step che il robot deve eseguire, quindi basta mandarle in un loop... o forse basta in blocco? chiedi a paga
+        # TO DO: INVIA IL COMANDO
+        # POI ESCE E TORNA IN CYCLE QUANDO MI ARRIVA LA RISPOSTA DAL DRIVER (SONO ARRIVATO)?
+        # TO DO: pubblica il comando traj + cycles per il driver
+        # devo chiamare la funzione di cinematica?
+        # a questo punto aspetto che il driver mi dica che ha finito il ciclo;
+        # e continuo a leggere su commands in un loop in attesa del comando di pausa o di stop
+
+        # sends the request to be able to wait for a stop or pause command
+        self.request.request_number = self.request.request_number + 1
+        self.request.request_type = 'change_state'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
+        self.pub.publish(self.request)
+
+        # checks the topic until the execution is not finished
+        while goal_reached == False:
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
+            if self.nextstate == -2:
+                # if a stop command is given, the robot must stop the execution and return in the ReadyState
+                #TO DO: pubblica il messaggio di stop per il robot e torna in stato 0
+                rospy.loginfo(color.BOLD + color.RED + '-- ROBOT STOPPED --' + color.END)
+                self.statename = 'INITIAL STATE'
+                rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
                 userdata.output = self.request.request_number
-                userdata.oldstate = 'START CYCLE STATE'
-                return 'tLoop'
+                userdata.oldstate = 'START LOOP STATE'
+                return 'tState0'
+            elif self.nextstate == -4:
+                # if a pause command is given, the robot must stop the execution until a go command is not given afterwards.
+                # it needs to stay inside the while loop until this happens!
+                # TO DO: manda un comando di stop al driver, ma poi rimane nel while del goal perche' non c'e' goal reached
+                rospy.loginfo(color.BOLD + color.YELLOW + '-- EXECUTION PAUSED --' + color.END)
 
-        else: # e' uscito -2
-            # annulla il comando e torna al main dello stato
-            rospy.loginfo(color.BOLD + color.RED + '-- OPERATION CANCELLED --' + color.END)
-            userdata.output = self.request.request_number
-            userdata.oldstate = 'START CYCLE STATE'
-            return 'tLoop'
+                # resets some variables, cannot use the reset method here
+                self.command = -1
+                self.instruction = -1
+                # asks for a new command, in this case the go command to resume the operation
+                self.request.request_number = self.request.request_number + 1
+                self.request.request_type = 'instruction_command'
+                self.request.active_state = self.statename
+                self.request.header.stamp = rospy.Time.now()
+                self.pub.publish(self.request)
+                # this while continues until a "GO" command is not given and confirmed (instruction and command both = 0)
+                while not (self.instruction == 0 and self.command == 0):
+                    self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.instructionCallback, queue_size = 1)
+                    if self.instruction == 0:
+                        # if it reads a "go" asks for a confirm
+                        self.confirmInstruction('[GO]')
+                        # exits the while loop only if after this call command is == 0, otherwhise it keeps waiting
+                        if self.command != 0:
+                            rospy.loginfo(color.BOLD + color.RED + '-- NOT CONFIRMED, STILL PAUSED --' + color.END)
+                        else:
+                            break
+                    if self.instruction == -2 or self.command == -2:
+                        # if somehow the exit command is given, it exits the state
+                        self.statename = 'LOOP STATE'
+                        rospy.loginfo(color.BOLD + color.RED + '-- EXECUTION CANCELLED, RETURNING TO ' + self.statename + ' --' + color.END)
+                        userdata.output = self.request.request_number
+                        userdata.oldstate = 'START LOOP STATE'
+                        return 'tLoop'
+
+                # if the program reaches this point, it means that it has exited the pause while loop, thus the execution can continue.
+                # remember that we are still in the main while loop, which ends only if the goal is reached; thus after this loginfo
+                # it simply restart the checks of the main while loop and keeps sending the trajectory packets to the robot
+                rospy.loginfo(color.BOLD + color.YELLOW + '-- CONTINUE EXECUTION --' + color.END)
+            elif goal_reached == True: #GOAL REACHED, me lo pubblica il driver come numero se finisce l'esecuzione
+                rospy.loginfo(color.BOLD + color.GREEN + '-- DONE! --' + color.END)
+            else: #significa che non legge comandi di interrupt vari quindi puo' continuare a inviare il resto dei pacchetti
+                # TO DO: continua l'invio (come aveva fatto rossano?)
+                dummy = 1 #istruzione a caso stupida per riempire senno' da' errore
+
+        self.statename = 'LOOP STATE'
+        rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
+        userdata.output = self.request.request_number
+        userdata.oldstate = 'START LOOP STATE'
+        return 'tLoop'
+    else: #e' uscito -2
+        rospy.loginfo(color.BOLD + color.RED + '-- OPERATION CANCELLED --' + color.END)
+        userdata.output = self.request.request_number
+        userdata.oldstate = 'START LOOP STATE'
+        return 'tLoop'
+
+
+else: # e' uscito -2
+    # annulla il comando e torna al main dello stato
+    rospy.loginfo(color.BOLD + color.RED + '-- OPERATION CANCELLED --' + color.END)
+    userdata.output = self.request.request_number
+    userdata.oldstate = 'START CYCLE STATE'
+    return 'tLoop'
+
+else: # e' uscito -2
+# annulla il comando e torna al main dello stato
+rospy.loginfo(color.BOLD + color.RED + '-- OPERATION CANCELLED --' + color.END)
+userdata.output = self.request.request_number
+userdata.oldstate = 'START CYCLE STATE'
+return 'tLoop'
 
 ########### PICK AND PLACE STATE ###########
 
-''' OK, BISOGNA SOLO SISTEMARE GRIPPER E SCREW ACTIONS '''
 class PickPlace(InstructionState):
     """ Pick and Place state. Allows the user to send to the robot some actions
     interactively, meaning that if no exit gesture is seen the robot waits for the next
@@ -929,6 +1012,7 @@ class PickPlace(InstructionState):
 
     def __init__(self, transitions=['tHome'], input=['input', 'oldstate', 'velocity', 'jogstep'], output=['output', 'oldstate', 'velocity', 'jogstep']):
         InstructionState.__init__(self, transitions, input, output)
+        self.action_list = []
 
     def listCommands(self):
         """ Method called at the startup of the state, to present the user the command list available. """
@@ -941,7 +1025,7 @@ class PickPlace(InstructionState):
         self.reset()
         P = None
         # loads the points file in joints coordinates
-        file = load_txt(PKG_PATH + 'data/QPoints.txt')
+        file = load_txt(PKG_PATH + '/data/QPoints.txt')
         names, points = load_points(file)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- SELECT POINT FROM LIST --' + color.END)
         for i in range(0,len(names)):
@@ -952,7 +1036,7 @@ class PickPlace(InstructionState):
 
         while self.instruction == -1:
             # waits for the correct instruction according to the request number sent before
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.instructionCallback, queue_size = 1)
 
             # checks if number is in point list, starts from 1
             if (int(self.instruction) >= 1) and (int(self.instruction) <= len(points)):
@@ -990,7 +1074,7 @@ class PickPlace(InstructionState):
 
         while self.instruction == -1:
             # waits for the correct instruction according to the request number sent before
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.instructionCallback, queue_size = 1)
 
             # checks if number is in point list, starts from 1
             if (int(self.instruction) >= 1) and (int(self.instruction) <= len(actions)):
@@ -1009,7 +1093,7 @@ class PickPlace(InstructionState):
                     action = None
                     self.nextstate = -2
                     break
-                else: # -3
+                else:
                     # waits
                     rospy.loginfo(color.BOLD + color.YELLOW + '-- PLEASE RE-ENTER INSTRUCTION --' + color.END)
                     self.update('instruction_command')
@@ -1024,10 +1108,35 @@ class PickPlace(InstructionState):
         # after exiting the while loop, it returns the point P
         return action
 
+    def writes_to_file(self):
+        # called at the end of the execute method, before exiting the state
+        rospy.loginfo(color.BOLD + color.CYAN + 'DO YOU WANT TO SAVE THE SEQUENCE OF ACTIONS AS AN OPERATION FILE? (0) YES (-2) NO' + color.END)
+        # asks for the command
+        self.statename = 'SAVE TO OPERATION?'
+        while proceed == False:
+            # asks the user
+            self.confirm()
+            if self.command == 0:
+                # calls the translate function
+                translate_operation(self.action_list)
+                proceed = True
+                break
+            elif self.command == -2:
+                # breaks and exits
+                self.nextstate = -2
+                proceed = True
+                break
+            else:
+                # the user deleted the last inserted command
+                proceed = False
+
     def execute(self, userdata):
         # when executed, initializes the variables calling the reset method
         self.statename = 'PICK AND PLACE STATE'
         self.reset()
+        # at the start of the method, initializes again the action list to ensure it is empty
+        # needed because we simply append the actions to the list
+        self.action_list = []
         # needed to correctly set the request number when entering the state
         self.request.request_number = userdata.input
         init_trajectory(self.trajectory, self.empty)
@@ -1051,19 +1160,14 @@ class PickPlace(InstructionState):
             if self.command == 0:
                 # confirmed action! Selects the corresponding one from cases.
                 # logs are printed inside the corresponding action functions
-                # TO DO: HOW TO CONTROL GRIPPER?
                 if (action == 2):
                     # open gripper action
-                    response = control_gripper(1)
-
+                    self.action_list.append((2, None))
+                    control_gripper(1)
                 elif (action == 3):
                     # close gripper action
-                    response = control_gripper(-1)
-
-                #elif (action == 4):
-                    # screw action, set to default
-                    # TO DO: HOW TO DO THE SCREW COMMAND?
-                #    screw(self.trajpub)
+                    self.action_list.append(3, None)
+                    control_gripper(-1)
                 else:
                     # move to point action, needs a point to be executed
                     P = None
@@ -1074,7 +1178,8 @@ class PickPlace(InstructionState):
                         if self.command == 0:
                             # only if both the action and the point have been selected correctly
                             # then it calls the movement action
-                            move_to_point(self.trajpub, self.trajectory, P, self.empty, self.empty, self.empty)
+                            self.action_list.append((1, P))
+                            move_to_point(self.trajpub, self.trajectory, P, self.empty, self.empty)
 
                         elif self.command == -2:
                             # exit command given
@@ -1093,8 +1198,8 @@ class PickPlace(InstructionState):
                 self.goal = False
                 while (self.goal == False):
                     if action != 2 and action != 3:
-                        # until goal not reached, checks the feedback topic
-                        self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                    # until goal not reached, checks the feedback topic
+                        self.trajsub = rospy.Subscriber(ROBOT_FEEDBACK, JointState, self.feedbackCallback, queue_size = 1)
                     else:
                         # if the action is a gripper one, sets the goal to true automatically
                         self.goal = True
@@ -1132,6 +1237,9 @@ class PickPlace(InstructionState):
                 self.nextstate = -1
 
         # does the following only when nextstate/command == -2, thus exiting from the state
+        # asks the user if it wants to save the last operation sequence into a new file
+        self.writes_to_file()
+        # exits the state
         self.statename = 'HOME STATE'
         rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
         userdata.output = self.request.request_number
@@ -1167,11 +1275,13 @@ class Jog(State):
         self.listCommands()
         # from this state the user can move to two substates, thus the request type is a change state one
         self.request.request_type = 'change_state'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
 
         while self.nextstate == -1:
             # waits for the correct command according to the request number sent before
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.stateCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
 
             if self.nextstate == 0:
                 # if the go command is given, the state machine moves to the start jog mode state
@@ -1259,12 +1369,14 @@ class JogRun(InstructionState):
         self.listCommands()
         # in this case the request type is directly the jog type, because this is an operative state
         self.request.request_type = 'jog_command'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
         # TO DO: publish joints workspace
 
         while self.nextstate == -1:
             # updates directly the instruction not the "nextstate" value from the callback
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.instructionCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.instructionCallback, queue_size = 1)
 
             if (self.instruction == 0) or (self.instruction > 10000) or (self.instruction == -5):
                 # the only available instructions are the GO (0) one, the JOG (10000) and the COLLAB (-5)
@@ -1276,11 +1388,11 @@ class JogRun(InstructionState):
                     if self.command == 0:
                         # save point confirmed, it needs to open the S points file, append it, recalculate the Q points and close everything
                         # gets the position from the feedback topic of the robot controller driver
-                        self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                        self.trajsub = rospy.Subscriber(ROBOT_FEEDBACK, JointState, self.feedbackCallback, queue_size = 1)
                         Q = self.last_position
                         # it is written as [0,0,0,0,0,0], already in joint state space
                         # loads the whole joints point list
-                        QQ = load_txt(PKG_PATH + 'data/QPoints.txt')
+                        QQ = load_txt(PKG_PATH + '/data/QPoints.txt')
                         # appends the new point to the list and checks for duplicates
                         QQ.append(Q)
                         QQ = checkifduplicates(QQ)
@@ -1288,7 +1400,7 @@ class JogRun(InstructionState):
                         # TO DO: use the direct kinematics function
                         SS = elaborateKinMulti(QQ)
                         # writes them in the corresponding file. It is not an append but a complete rewriting of the contents
-                        SS = write_txt(PKG_PATH + 'data/SPoints.txt', Q)
+                        SS = write_txt(PKG_PATH + '/data/SPoints.txt', Q)
                         rospy.loginfo(color.BOLD + color.GREEN + '-- POINT ' + str(S) + ' SAVED, DUPLICATES REMOVED --' + color.END)
                         # updates the request and resets variables, thus it remains in the while loop after this (not breaking it)
                         self.update('jog_command')
@@ -1343,7 +1455,7 @@ class JogRun(InstructionState):
                         # prints a log here to debug what is doing
                         rospy.loginfo(color.BOLD + color.YELLOW + '[JOINT ' + str(self.joint) + ': ' + sdir + ' POSITION]' + color.END)
                         # gets last position
-                        self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                        self.trajsub = rospy.Subscriber(ROBOT_FEEDBACK, JointState, self.feedbackCallback, queue_size = 1)
                         # publish the movement command in the joint topic of the driver
                         positions = self.last_position + userdata.jogstep
                         write_trajectory(positions, self.empty, self.empty, self.empty)
@@ -1352,7 +1464,7 @@ class JogRun(InstructionState):
                         self.goal = False
                         while (self.goal == False):
                             # until goal not reached, checks the feedback topic
-                            self.trajsub = rospy.Subscriber('/ur10/joint_states', JointState, self.feedbackCallback, queue_size = 1)
+                            self.trajsub = rospy.Subscriber(ROBOT_FEEDBACK, JointState, self.feedbackCallback, queue_size = 1)
 
                             if self.goal == True:
                                 rospy.loginfo(color.BOLD + color.GREEN + '-- POSITION REACHED --' + color.END)
@@ -1407,10 +1519,10 @@ class JogStepSize(State):
         rospy.loginfo(color.BOLD + color.CYAN + '[STATE 4: ' + self.statename + ']' + color.END)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- OPENING POINTS FILE --' + color.END)
         # calls gedit "filepath" in the shell, so to edit the step size manually
-        return_code = subprocess.call("gedit " + PKG_PATH + "data/JogStepSize.txt", shell=True)
+        return_code = subprocess.call("gedit " + PKG_PATH + "/data/JogStepSize.txt", shell=True)
         rospy.loginfo(color.BOLD + color.PURPLE + '-- DONE!--' + color.END)
         # reloads the file after the editing process ended
-        step = load_txt(PKG_PATH + 'data/JogStepSize.txt')
+        step = load_txt(PKG_PATH + '/data/JogStepSize.txt')
         # prints the new step size as a debug info
         rospy.loginfo(color.BOLD + color.YELLOW + '| NEW STEP SIZE: ' + str(step[0][0]) + ' |' + color.END)
         userdata.jogstep = float(step[0][0])
@@ -1463,11 +1575,13 @@ class SetVel(State):
         self.listCommands()
         # sets the request type to change state since nextstate its the variable we want to update
         self.request.request_type = 'change_state'
+        self.request.active_state = self.statename
+        self.request.header.stamp = rospy.Time.now()
         self.pub.publish(self.request)
 
         while self.nextstate == -1:
             # reads the value of nextstate using the correct callback function and request type
-            self.sub = rospy.Subscriber('/command_response', commandResponse, self.stateCallback, queue_size = 1)
+            self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
             # note that is nextstate that gets updated, but a numerical command is given representing the speed value
             # in a similar way to what is done in the home state to select the substates.
             # here, selecting numbers from 1 to 9 select a velocity from 10% to 90%, while 0 means 100%
@@ -1535,9 +1649,9 @@ def main():
         sm.userdata.request_number = 0
         sm.userdata.oldstate = 'NONE'
         # sets the robot velocity to 80% system wise
-        sm.userdata.velocity = 1.0
+        sm.userdata.velocity = 0.80
         # sets the jog step size system wise loading it from file
-        sm.userdata.jogstep = load_txt(PKG_PATH + 'data/JogStepSize.txt')
+        sm.userdata.jogstep = load_txt(PKG_PATH + '/data/JogStepSize.txt')
         sm.userdata.jogstep = sm.userdata.jogstep[0][0]
 
         # Open the container

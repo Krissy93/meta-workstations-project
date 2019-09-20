@@ -3,11 +3,12 @@
 import rospy
 from robot import *
 from utils import *
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from trajectory_msgs.msg import JointTrajectory
 from sensor_msgs.msg import JointState
 from std_srvs.srv import SetBool
+import rospkg
 
-PKG_PATH = '/home/eulero/projects/ros_ws/src/state_machine_package/'
+PKG_PATH = rospkg.RosPack().get_path('state_machine_package')
 
 def action_list():
     """ Prints all the available actions present in this file. """
@@ -17,11 +18,10 @@ def action_list():
     rospy.loginfo(color.BOLD + color.PURPLE + '| 1: MOVE TO POINT  |' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '| 2: OPEN GRIPPER   |' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '| 3: CLOSE GRIPPER  |' + color.END)
-    rospy.loginfo(color.BOLD + color.PURPLE + '| 4: SCREW          |' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '|-2: EXIT           |' + color.END)
     rospy.loginfo(color.BOLD + color.PURPLE + '|-------------------|' + color.END)
 
-    actions = ['MOVE TO POINT', 'OPEN GRIPPER', 'CLOSE GRIPPER', 'SCREW']
+    actions = ['MOVE TO POINT', 'OPEN GRIPPER', 'CLOSE GRIPPER']
 
     return actions
 
@@ -30,7 +30,7 @@ def init_points2():
     to the robot-dependant inverse kinematic function. This function is defined in robot.py """
 
     # loads the points file
-    file = load_txt(PKG_PATH + 'data/SPoints.txt')
+    file = load_txt(PKG_PATH + '/data/SPoints.txt')
     names, points = load_points(file)
     # checks for duplicates. Just a safety measure
     names, points = checkifduplicates(names, points)
@@ -38,7 +38,7 @@ def init_points2():
     # the function calls the corresponding inverse kinematics function of the robot
     Q = elaborateKinMulti(points)
     # writes them in the corresponding file. It is not an append but a complete rewriting of the contents
-    QPoints = write_txt(PKG_PATH + 'data/QPoints.txt', names, Q)
+    QPoints = write_txt(PKG_PATH + '/data/QPoints.txt', names, Q)
     # debug
     print(color.BOLD + color.PURPLE + '-- JOINTS COORDINATES RECALCULATED!--' + color.END)
     for i in range(0,len(points)):
@@ -46,11 +46,10 @@ def init_points2():
     return QPoints
 
 def init_points():
-    """ Loads the XYZ points file and calculates the joints coordinates according
-    to the robot-dependant inverse kinematic function. This function is defined in robot.py """
+    """ Loads the joint points file into memory """
 
     # loads the points file
-    file = load_txt(PKG_PATH + 'data/QPoints.txt')
+    file = load_txt(PKG_PATH + '/data/QPoints.txt')
     names, points = load_points(file)
 
     rospy.loginfo(color.BOLD + color.PURPLE + '-- JOINTS COORDINATES: --' + color.END)
@@ -58,11 +57,11 @@ def init_points():
         rospy.loginfo(color.BOLD + color.YELLOW + '| POINT ' + str(names[i]) + ' ' + str(points[i]) + color.END)
     return points
 
-
 def init_trajectory(trajectory, empty):
     """ The trajectory message is initialized here when first called.
     The joints must be changed every time a new robot is connected to the system,
-    according to how many joints it has. TO DO: loads this info from userdata given at launch? """
+    according to how many joints it has.
+    TO DO: loads this info from userdata given at launch? """
 
     trajectory.header.seq = 1
     #trajectory.header.stamp.secs = 0
@@ -77,7 +76,9 @@ def write_trajectory2(trajectory, positions, velocities, accelerations, effort):
     """ Method to create a JointTrajectory message ready to be sent to the driver node.
     The sequence number and time stamp are calculated based on what was the previous message sent.
     Each value of positions, velocity and so on refers to a specific joint in the same list position.
-    Note that positions etc must be given to the function as lists: [[0,0,0,0,0,0], [1,1,1,1,1,1], ...] """
+    Note that positions etc must be given to the function as lists: [[0,0,0,0,0,0], [1,1,1,1,1,1], ...]
+
+    OLD VERSION"""
 
     # needed to set a single point in the right format.
     positions = [positions]
@@ -97,21 +98,17 @@ def write_trajectory2(trajectory, positions, velocities, accelerations, effort):
         trajectory.points.append(points)
     print(trajectory)
 
-def write_trajectory(trajectory, positions, velocities, accelerations, effort):
+def write_trajectory(trajectory, positions, velocities, effort):
     """ Method to create a JointTrajectory message ready to be sent to the driver node.
     The sequence number and time stamp are calculated based on what was the previous message sent.
     Each value of positions, velocity and so on refers to a specific joint in the same list position.
     Note that positions etc must be given to the function as lists: [[0,0,0,0,0,0], [1,1,1,1,1,1], ...] """
 
     # needed to set a single point in the right format.
-    #trajectory.position = [positions]
-    #trajectory.velocity = [velocities]
-    #trajectory.effort = [effort]
-
     trajectory.position = []
     trajectory.velocity = []
     trajectory.effort = []
-    
+
     for i in range(0,len(positions)):
         trajectory.position.append(float(positions[i]))
         trajectory.velocity.append(float(velocities[i]))
@@ -126,7 +123,7 @@ def send_trajectory(trajectory, pub):
     pub.publish(trajectory)
     rospy.loginfo(color.BOLD + color.GREEN + '-- TRAJECTORY SENT --' + color.END)
 
-def move_to_point(pub, trajectory, P, V, A, E):
+def move_to_point(pub, trajectory, P, V, E):
     """ Function to fill in the trajectory message according to the action.
     In this case, the action is to move the robot to a specific point.
     The point P can be set choosing from the list of available points or in a static way.
@@ -136,7 +133,7 @@ def move_to_point(pub, trajectory, P, V, A, E):
 
     rospy.loginfo(color.BOLD + color.YELLOW + '-- MOVE ROBOT TO POSITION --' + color.END)
     # fills in the message
-    write_trajectory(trajectory, P, V, A, E)
+    write_trajectory(trajectory, P, V, E)
     # sends it
     send_trajectory(trajectory, pub)
     # after calling this function, the code must check if the goal has been reached
@@ -175,11 +172,3 @@ def control_gripper(command):
         return response
     except rospy.ServiceException:
         rospy.logerror('Service call failed')
-
-def screw(pub):
-    """ To screw something usually the last-1 joint is the one to move.
-    The function selects the joint and make it revolve around its axis to screw an object handled by the gripper.
-    It assumes that the robot is already in the right position and the only thing left to do
-    is to screw the object in place! """
-
-    rospy.loginfo(color.BOLD + color.YELLOW + '-- SCREW OBJECT --' + color.END)

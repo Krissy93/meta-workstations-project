@@ -4,10 +4,11 @@ import os
 import rospy
 import tensorflow as tf
 import time
+import math
 
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
-import matplotlib as plt
+
 import numpy as np
 import cv2
 import sys
@@ -18,7 +19,7 @@ from state_machine_package.msg import commandRequest, commandResponse
 
 ##### MACROS DEFINITION
 
-PKG_PATH = '/home/eulero/projects/ros_ws/src/state_machine_package/'
+PKG_PATH = '/home/optolab/smach_ws/src/state_machine_package/'
 # frozen graph path
 PATH_TO_CKPT = PKG_PATH + 'network/RGB.pb'
 # labelmap path
@@ -98,6 +99,8 @@ class Kinect():
         self.undistorted = Frame(512, 424, 4)
         self.registered = Frame(512, 424, 4)
 
+        self.color_hsv = None
+
     def acquire(self):
         ''' Acquisition method to trigger the Kinect to acquire new frames. '''
 
@@ -139,6 +142,32 @@ class Kinect():
 
         # do this anyway to release every acquired frame
         self.listener.release(frames)
+
+    def rgb2hsv(self):
+        '''Function that converts the RGB input frame in HSV '''
+
+        r = self.color_new[:,:,0]/255.0
+        g = self.color_new[:,:,1]/255.0
+        b = self.color_new[:,:,2]/255.0
+        mx = max(r, g, b)
+        mn = min(r, g, b)
+        df = mx-mn
+        if mx == mn:
+            h = 0
+        elif mx == r:
+            h = (60 * ((g-b)/df) + 360) % 360
+        elif mx == g:
+            h = (60 * ((b-r)/df) + 120) % 360
+        elif mx == b:
+            h = (60 * ((r-g)/df) + 240) % 360
+        if mx == 0:
+            s = 0
+        else:
+            s = df/mx
+        v = mx
+
+        self.color_hsv = np.dstack((h,s,v))
+
 
 
 class MessageUpdater():
@@ -193,20 +222,11 @@ class MessageUpdater():
             rospy.loginfo(color.BOLD + color.YELLOW + 'RECEIVED REQUEST NUMBER: ' + str(self.request.request_number) + color.END)
             self.received = True
 
-    def gamma_correction(self, gamma):
-        image = self.kinect.color_new
-        invGamma = 1.0 / gamma
-        table = np.array([((i / 255.0) ** invGamma) * 255
-            for i in np.arange(0, 256)]).astype("uint8")
-        self.kinect.color_new = cv2.LUT(image, table)
-
-    def detect(self, sess):
+    def detect(self, sess, image):
         ''' Method to perform the actual inference on frames acquired from the
         Kinect object triggerd outside this function. To correctly display the frames
         the method returns the detected image and this is used for display outside the method '''
 
-        # we want to use the flipped and resized numpy array
-        image = self.kinect.color_new
         # the numpy array of the image is expanded (1 dimension added needed for the net)
         image_np_expanded = np.expand_dims(image, axis=0)
         # extract image tensor
@@ -243,7 +263,7 @@ class MessageUpdater():
             if len(self.detection_list) > 0:
                 # I have at least one element in the list
                 if (self.detection_list.count(self.detection_list[0]) == len(self.detection_list)):
-                    if (len(self.detection_list) == 7):
+                    if (len(self.detection_list) == 10):
                         # send message if each element is the same and we have exactly 3 elements
                         # else it does nothing
                         self.correct = True
@@ -450,7 +470,6 @@ class MessageUpdater():
 
         return s, c, b
 
-
     def execute(self, sess):
         ''' This method is the one where the detection happens if a request
         has been received. If no request has been received, the acquired frame
@@ -463,16 +482,18 @@ class MessageUpdater():
         while self.correct == False:
             # triggers the kinect to acquire a frame
             self.kinect.acquire()
-            #self.gamma_correction(0.6)
             # checks the request
             self.sub = rospy.Subscriber('/command_request', commandRequest, self.messageCallback, queue_size=1)
             # if new request has been correctly received, calls the detection function
             # the kinect frame is stored in self.kinect.color_new and similar variables
-            self.detect(sess)
+
+            # we want to use the flipped and resized numpy array
+            self.detect(sess, self.kinect.color_new)
             if self.correct == True:
                 self.response.request_number = self.request.request_number
                 self.response.request_type = self.request.request_type
                 self.response.command = self.command
+                self.response.header.stamp = rospy.Time.now()
                 self.pub.publish(self.response)
                 rospy.loginfo(color.BOLD + color.YELLOW + '-- COMMAND SENT: ' + str(self.response.command) + ' --' + color.END)
 
@@ -482,8 +503,11 @@ class MessageUpdater():
                 self.quit = True
                 break
 
+
+
 def myhook():
     rospy.loginfo(color.BOLD + color.RED + '\n -- KEYBOARD INTERRUPT, SHUTTING DOWN --' + color.END)
+
 
 def main():
     rospy.init_node('gestures_node')
