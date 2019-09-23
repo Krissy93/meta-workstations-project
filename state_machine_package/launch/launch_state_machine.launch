@@ -8,4 +8,6 @@
         required="true">
   </node>
 
+  <node pkg="rosbag" type="record" name="BagSave" args="/command_request /command_response /joint_state_pose /joint_states --split --size=512 -O $(find state_machine_package)/bags/meta-workstations-bags.bag" />
+
 </launch>
