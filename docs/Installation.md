@@ -162,4 +162,5 @@ cd workspace/ros/src
 git clone xxxx
 ```
 - **SMACH module:** this is needed for the State Machine core structure. It has been modified to correct some bugs from the [original project](http://wiki.ros.org/smach). Install the modified version by copying the `executive_smach_visualization` folder (inside the `meta-workstations-project` folder just cloned) into your `$HOME/workspace/ros/src/` directory.
-- **State Machine Package:** this is the ros package we developed, containing the State Machine node, the Gestures node and everything needed by these two. Copy the `state_machine_package` folder into your `$HOME/workspace/ros/src/` directory, and finally install everything: go the `$HOME/workspace/ros` directory and type `catkin_make`.
+- **State Machine Package:** this is the ROS package we developed, containing the State Machine node, the Gestures node and everything needed by these two. Copy the `state_machine_package` folder into your `$HOME/workspace/ros/src/` directory, and finally install everything: go the `$HOME/workspace/ros` directory and type `catkin_make`.
+- **Download the networks needed for the project:** these have been uploaded in a Google Drive folder because of the files dimensions. [Download them from here](https://drive.google.com/open?id=19CisjwZMx2Rh4tP27jMk3f6nTe3vSASh) and move them into the `network` folder of the package.
