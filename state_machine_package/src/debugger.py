@@ -24,25 +24,29 @@ class message_updater():
 
     def asknew(self):
         '''RESPONSE:
+           header
            int64 request_number
            string request_type
            int16 command
 
            REQUEST
+           header
            int64 request_number
-           string request_type'''
+           string request_type
+           active_state'''
 
-        new = input(color.BOLD + color.CYAN + 'NEW COMMAND: ' + color.END)
+        new = raw_input(color.BOLD + color.CYAN + 'NEW COMMAND: ' + color.END)
         self.response.request_number = self.request.request_number
         self.response.request_type = self.request.request_type
-        self.response.command = new
+        self.response.command = int(new)
+        self.response.header.stamp = rospy.Time.now()
+        self.pub.publish(self.response)
 
     def execute(self):
         self.sub = rospy.Subscriber('/command_request', commandRequest, self.received, queue_size=1)
         time.sleep(1)
         if self.ok == True:
             self.asknew()
-            self.pub.publish(self.response)
             rospy.loginfo(color.BOLD + color.YELLOW + '-- COMMAND SENT --' + color.END)
             self.ok = False
         self.rate.sleep()

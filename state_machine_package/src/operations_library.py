@@ -5,6 +5,8 @@ from utils import *
 import os
 import shutil
 import codecs
+import time
+import glob
 
 def translate_operation(pkg_path, action_list):
     ''' Used to translate actions saved in a list.
@@ -27,31 +29,37 @@ def translate_operation(pkg_path, action_list):
     # copies empty.py file in the new directory with the new name
     shutil.copy(pkg_path + '/data/empty.py', pkg_path + filename)
 
-    with codecs.open(pkg_path + filename, "a", encoding="utf-8-sig") as file:
-        file.write('\n\n' + INDENT + '# START OF AUTO-WRITTEN PORTION')
+    with codecs.open(pkg_path + filename, "a") as file:
+        file.write('\n\n' + INDENT + INDENT + '# START OF AUTO-WRITTEN PORTION')
 
         # append to file portions of txt according to the saved action
         for i in range(0,len(action_list)):
             current_action = action_list[i][0]
             if current_action == 2:
                 # writes open gripper action
-                file.write('\n\n' + INDENT + 'control_gripper(1)')
+                file.write('\n\n' + INDENT + INDENT + 'control_gripper(1)')
             elif current_action == 3:
                 # close gripper action
-                file.write('\n\n' + INDENT + 'control_gripper(-1)')
+                file.write('\n\n' + INDENT + INDENT + 'control_gripper(-1)')
             elif current_action == 1:
                 # write the move to point action according to the point saved
                 # write: move_to_point(pub, action_list[i][1], empty, empty)
-                file.write('\n\n' + INDENT + 'move_to_point(self.pub, self.trajectory, ' + str(action_list[i][1]) + ', self.empty, self.empty)')
+                file.write('\n\n' + INDENT + INDENT + 'move_to_point(self.pub, self.trajectory, ' + str(action_list[i][1]) + ', self.empty, self.empty)')
 
             # before going further, writes the feedback while loop
             if current_action != 2 and current_action != 3:
                 # until goal not reached, checks the feedback topic
-                file.write('\n\n' + INDENT + 'self.goal = False')
-                file.write('\n' + INDENT + 'while (self.goal == False):')
-                file.write('\n' + INDENT + INDENT + 'self.trajsub = rospy.Subscriber(ROBOT_FEEDBACK, JointState, self.feedbackCallback, queue_size = 1)')
-                file.write('\n' + INDENT + INDENT + 'if self.goal == True:')
-                file.write('\n' + INDENT + INDENT + INDENT + 'rospy.loginfo(color.BOLD + color.YELLOW + \'-- POSITION REACHED --\' + color.END)')
+                file.write('\n\n' + INDENT + INDENT + 'self.goal = False')
+                file.write('\n' + INDENT + INDENT + 'while (self.goal == False):')
+                file.write('\n' + INDENT + INDENT + INDENT + 'self.trajsub = rospy.Subscriber(ROBOT_FEEDBACK, JointState, self.feedbackCallback, queue_size = 1)')
+                file.write('\n' + INDENT + INDENT + INDENT + 'if self.goal == True:')
+                file.write('\n' + INDENT + INDENT + INDENT + INDENT + 'rospy.loginfo(color.BOLD + color.YELLOW + \'-- POSITION REACHED --\' + color.END)')
+                file.write('\n' + INDENT + INDENT + INDENT + INDENT + 'break')
+
+        file.write('\n\n' + '# OBJECT THAT CONTAINS THE OPERATION AS A LIST OF ACTION CALLS')
+        file.write('\n' + 'class OpObject():')
+        file.write('\n' + INDENT + 'def __init__(self):')
+        file.write('\n' + INDENT + INDENT + 'self.list = ' + str(action_list))
 
     rospy.loginfo(color.BOLD + color.GREEN + '-- OPERATION FILE WRITTEN IN: ' + filename + ' --' + color.END)
 
@@ -69,3 +77,5 @@ def init_operations(pkg_path):
     files.sort(key=lambda x: os.path.getmtime(x))
 
     return files
+
+#translate_operation('/home/optolab/smach_ws/src/state_machine_package', [(2,None),(1,[1,1,1,1,1,1]),(3,None)])
