@@ -12,6 +12,7 @@ ROBOT_FEEDBACK = '/joint_states'
 class Operation():
     def __init__(self):
         self.trajectory = JointTrajectory()
+        self.request = commandRequest()
         self.empty = [0,0,0,0,0,0]
         self.pub = rospy.Publisher(ROBOT_PUB, JointTrajectory, queue_size = 1, latch=True)
         self.goal = False
@@ -38,8 +39,6 @@ class Operation():
         # because it is nearly impossible to reach the theoretical position requested
         # so an approximation is needed
         if (msg.position >= self.trajectory.positions - 0.01) and (msg.position <= self.trajectory.positions + 0.01):
-        #print(self.trajectory.points[0].positions)
-        #if (msg.position[0] == 888) and (msg.position[1] >= self.trajectory.points[0].positions[1] - 0.01) and (msg.position[1] <= self.trajectory.points[0].positions[1] + 0.01):
             # if the two positions are almost equal, it means that the robot
             # has reached the goal of the last message. Sets the goal to true
             self.goal = True
