@@ -5,9 +5,13 @@ Install dependencies first:
   ```
   sudo apt-get update
   sudo apt-get upgrade
-  sudo apt-get install build-essential dkms git
-  software-properties-gtk -> additional drivers -> nvidia 384.130 -> apply
-  reboot
+  sudo apt-get install build-essential dkms git software-properties-common
+  ```
+For the graphic driver:
+  ```
+  sudo add-apt-repository ppa:graphics-drivers/ppa
+  sudo apt-get update
+  sudo apt-get install nvidia-384
   ```
 - **ROS Kinetic:** it is based on python2, so our whole code is python2 based. Older versions of ROS may still work, as well as newer ones, test them yourself to find out!
   ```
