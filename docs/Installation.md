@@ -144,7 +144,8 @@ If using a RealSense or other camera, install their dependencies (For the RealSe
   ```
 - **pylibfreenect2:** This is the python wrapper needed to correctly set up the Kinect acquisition. Official repository and installation instructions are [here](https://github.com/r9y9/pylibfreenect2/blob/master/docs/installation.rst). Basically after `libfreenect2` installation (the default installation directory is `usr/local`, so check if it is installed there) simply type:
   ```
-  pip install pylibfreenect2
+  pip install --user Cython
+  pip install --user pylibfreenect2
   ```
 - **iai_kinect2:** the main iai_kinect2 repository is [here](https://github.com/code-iai/iai_kinect2), check it out to understand how to use it! The installation steps are:
   ```
