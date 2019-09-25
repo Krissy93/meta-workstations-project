@@ -7,7 +7,7 @@ Install dependencies first:
   sudo apt-get upgrade
   sudo apt-get install build-essential dkms git software-properties-common
   ```
-For the graphic driver:
+  For the graphic driver:
   ```
   sudo add-apt-repository ppa:graphics-drivers/ppa
   sudo apt-get update
@@ -16,7 +16,7 @@ For the graphic driver:
 - **ROS Kinetic:** it is based on python2, so our whole code is python2 based. Older versions of ROS may still work, as well as newer ones, test them yourself to find out!
   ```
   sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-  sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
+  sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key new key: C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
   sudo apt-get update
   sudo apt-get install ros-kinetic-desktop-full python-rosinstall
   rosdep init
