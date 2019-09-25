@@ -16,7 +16,7 @@ Install dependencies first:
 - **ROS Kinetic:** it is based on python2, so our whole code is python2 based. Older versions of ROS may still work, as well as newer ones, test them yourself to find out!
   ```
   sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-  sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key new key: C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+  sudo -E apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
   sudo apt-get update
   sudo apt-get install ros-kinetic-desktop-full python-rosinstall
   rosdep init
