@@ -11,7 +11,7 @@ We use a Kinect v2 camera as the image sensor. To read the frames we can:
 - use `pylibfreenect2` and directly access the Kinect without using a ROS bridge to do it.
 We choose to use the latter in this version to reduce the amount of ROS nodes and improve speed.
 
-NOTE: when using `kinect2_bridge` we usually consider the `_rect` topics because our cameras are **intrinsecally calibrated**.
+**NOTE:** when using `kinect2_bridge` we usually consider the `_rect` topics because our cameras are **intrinsecally calibrated**.
 Intrinsic calibration is needed to correct the distortion parameters of the camera, and correctly align the color information to the depth information obtained from the Kinect (if you need it).
 It is not a required step, but is a good practice to obtain good quality data!
 
