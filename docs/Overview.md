@@ -3,7 +3,7 @@ The system is composed of several nodes that perform some core functionality. Th
 At the present time, the developed structure is detailed in Fig. 1.
 
 <p align="center">
-  <img height="400" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/system_overview.png">
+  <img height="400" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/system_overview3.png">
 </p>
 
 ## State Machine Node
@@ -11,7 +11,7 @@ The main node is the **State Machine Node**, which contains the definition of th
 For now, a set of simple functionalities (Fig. 2) has been developed but new robot functionalities can be easily added to the state machine by adding a new State to the `state_machine.py` core file.
 
 <p align="center">
-  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/Fig2.png">
+  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/statemachine2.png">
 </p>
 
 The functionalities developed so far are:
