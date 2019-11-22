@@ -55,5 +55,8 @@ Right now, only 3 actions have been defined:
 - Close gripper (same as before)
 
 ## Operation Definition
-Operations are complete python programs that can be loaded into memory and executed as they are or joined together with other Operations to compose a more complex one. Each Operation file has an object defined at the start of the program that is loaded into memory. The object contains the type of Actions (i. e. Move to point is Action 1) and their parameters, defining the Operation as an ordinate sequence of Actions to take. It is easy to join more Operations together in this way, or tell the interface to reproduce the Operation sequence a given number of times before starting the new Operation sequence.
+Operations are complete python programs that can be loaded into memory and executed as they are or joined together with other Operations to compose a more complex one. 
+
+Each Operation file has an object defined at the start of the program that is loaded into memory. The object contains the type of Actions (i. e. Move to point is Action 1) and their parameters, defining the Operation as an ordinate sequence of Actions to take. It is easy to join more Operations together in this way, or tell the interface to reproduce the Operation sequence a given number of times before starting the new Operation sequence.
+
 Operations are used in the **Loop State**, and can be defined by hand by the user or from the **Pick&Place State**. In this case, the user performs the Actions one at a time and, upon exiting the State, can save the Actions taken with their parameters into an Operation file.
