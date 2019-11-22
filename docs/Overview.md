@@ -1,6 +1,6 @@
 # Overview of the system
 The system is composed of several nodes that perform some core functionality. The nodes talk with each other by sending messages on specific topics.
-At the present time, the developed structure is detailed in Fig. 1.
+The developed structure is detailed in Fig. 1.
 
 <p align="center">
   <img height="400" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/system_overview3.png">
@@ -14,12 +14,49 @@ For now, a set of simple functionalities (Fig. 2) has been developed but new rob
   <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/statemachine2.png">
 </p>
 
+When launched, the State Machine enters an initial state called **Ready State**. From here, users can decide to quit the program or start communicating with the robot. If the latter is chosen, the State Machine moves to another state called **Home State**, from which users can decide which functionality they want to use.
+
 The functionalities developed so far are:
-- **Ready State:** This is the first state of the State Machine. From there, the user can only QUIT the program or proceed to the HOME state (CONFIRM gesture). It is redundant on purpose to avoid the closing of the application by mistake;
-- **Home State:** In this state the user can select the functionality to use simply by performing the numerical gesture related to the state (i. e. 0 + 1 is the Loop State).
-- **Points Definition State:** It is accessed by performing the "OPEN FILE" gesture. The only purpose of this state is to open the `SPoints` or `QPoints` files, letting the user modify them by using the keyboard and update them upon recalculating their corresponding transforms (i. e. fromt SPoints one can obtain the corresponding QPoints by using the robot Kinematic functions);
-- **Loop State:** It is accessed by performing the 0 + 1 numerical gesture. Users can modify the Operations file accessing the Loop Operation State ("OPEN FILE") or launch a Loop Operation ("CONFIRM" gesture). In this case, users have to select the Operation from the list and choose the number of times this loop must be executed. Loops can be stopped or paused any time;
-- **Pick & Place State:** This state is accessed by performing the 0 + 2 numerical gesture. Users interactively choose an action from the list of actions and, if required by the action, a point from the list of points. Upon selection, the command is sent to the robot and after its execution the system asks the user if it wants to select another action to be performed or if it wants to end the procedure, in this case going back to the Home State;
+- **Loop definition State:** This state is accessed by performing the 0 + 1 numerical gesture. In this state users can define a "loop" operation that the robot must perform a given number of times. To do so, the user must select one or more Operation files that are loaded automatically at the start of this state from the corresponding subdirectory of the package (i. e. `/state_machine_package/operations`). When an Operation file is selected, the user tells the robot how many repetitions of the last Operation file it must execute before proceeding to the next Operation file.
+For example:
+```
+Operation 1: /operations/First.py
+Repetitions: 3
+Operation 2: /operations/Second.py
+Repetitions: 2
+```
+The final schedule of operations for the robot are:
+```
+Operation 1
+Operation 1
+Operation 1
+Operation 2
+Operation 2
+```
+It is also possible to define the whole Operation as a number of Operation files and define a loop value for the whole Operation:
+```
+Operation 1: /operations/First.py
+Repetitions: 1
+Operation 2: /operations/Second.py
+Repetitions: 1
+Global Repetitions: 4
+```
+In this case, the schedule is:
+```
+Operation 1
+Operation 2
+
+Operation 1
+Operation 2
+
+Operation 1
+Operation 2
+
+Operation 1
+Operation 2
+```
+After the definition of the Operation to execute, the State Machine automatically moves to the **Launch loop operation State** which sends one action at a time to the robot. In this way, the execution can be paused by the user at any time by performing the "PAUSE" gesture, afterwards it can be resumed by performing the "CONFIRM" gesture. It is also possible to stop the execution completely by performing the "EXIT" gesture at any time: in this case the State Machine will return to the Initial State;
+- **Pick & Place State:** This state is accessed by performing the 0 + 2 numerical gesture. Users interactively choose an action from the list of actions and, if required by the action, a point from the list of points. Upon selection, the command is sent to the robot and after its execution the system asks the user if it wants to select another action to be performed or if it wants to end the procedure, in this case going back to the Home State. Each Action performed is stored into memory, and the user can decide to save the whole set of actions as an Operation file upon exiting the State;
 - **Jog State:** It is the state where users can change the robot joint positions easily. It is accessed by performing the 0 + 3 numerical gesture, and it has two sub-states: the first one ("OPEN FILE" gesture) allows users to change the robot step size by modifiying the related file, while the second one ("CONFIRM" gesture) allows users to launch the Jog Mode. In Jog Mode each joint is moved one at a time of the Jog Step Size, and users can decide to: move the joint increasing its position (Joint + Right Direction gesture), move the joint decreasing its position (Joint + Left Direction gesture) or stop the joint right there (Joint + Five gesture). To save the achieved position, users can perform the "CONFIRM" gesture in order to append its joint coordinates read from the `/joint_states` topic to the `QPoints` file;
 - **Set System Velocity State:** This state is accessed by performing the 0 + 4 gesture. Users can define the robot velocity system-wise by performing the numerical gesture related to the percentage of speed they want. For example, to set the robot velocity at 80% users must perform the 0 + 8 gesture.
 
