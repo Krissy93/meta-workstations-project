@@ -7,8 +7,9 @@ The Node is based on Deep Learning to recognize the hand gestures in the image f
 We fine-tuned an R-FCN Object Detector on our gestures dataset using the [TensorFlow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection). 
 
 We use a Kinect v2 camera as the image sensor. To read the frames we can:
-- access the corresponding topics (i. e. `/kinect2/qhd/image_color_rect`) using `kinect2_bridge` and `libfreenect2`
-- use `pylibfreenect2` and directly access the Kinect without using a ROS bridge to do it.
+- access the corresponding topics (i. e. `/kinect2/qhd/image_color_rect`) using [kinect2_bridge](https://github.com/code-iai/iai_kinect2) and [libfreenect2](https://github.com/OpenKinect/libfreenect2)
+- use [pylibfreenect2](https://github.com/r9y9/pylibfreenect2) and directly access the Kinect without using a ROS bridge to do it.
+
 We choose to use the latter in this version to reduce the amount of ROS nodes and improve speed.
 
 **NOTE:** when using `kinect2_bridge` we usually consider the `_rect` topics because our cameras are **intrinsecally calibrated**.
@@ -49,10 +50,10 @@ These are used as **directional gestures** to represent the increment (if the ha
 - gesture (n) represents the **exit** command. It is used both as an interface command to exit the state and/or the confirmation panel, and to close the communication and/or the whole program;
 - gesture (o) represents the **pause** command, to stop momentairly a robot execution and resume it in a later moment.
 
-Thus, the composed commands are of two types: **Commands** and **Instructions**.
+Thus, the composed commands are of two types: **Static Commands** and **Parametric Commands**.
 
-### Commands
-Commands are statically defined and always represent the same meaning in the whole system.
+### Static Commands
+Static Commands are statically defined and always represent the same meaning in the whole system.
 These are:
 - **CONFIRM** command: (j) + (j) gestures. It is used to confirm inserted commands/instructions and give the robot the signal to start or resume its movement;
 - **DELETE** command: (k) + (k) gestures. It is used as the interface command to delete the command/instruction inserted before and allow the user to enter the correct one;
@@ -60,8 +61,8 @@ These are:
 - **PAUSE** command: (o) gesture. It has the same meaning described above, since it's performed with both hand by default;
 - **OPEN FILE** command: (m) gesture. It has the same meaning described above, since it's performed with both hand by default.
 
-### Instructions
-Instructions are dynamically composed, thus allowing the user to create numbers or codes on-the-go. Some examples are:
+### Parametric Commands
+Parametric Commands are dynamically composed, thus allowing the user to create numbers or codes on-the-go. Some examples are:
 - **CREATE SINGLE DIGIT NUMBER:** (j) + (a-i) gestures. Numbers are calculated considering the left gesture as the first digit and the right gesture as the second.
 In this case the output is 0 + N = N;
 - **CREATE TWO DIGIT NUMBER:** (a-i) + (a-i + j) gestures. Examples are: number 37 (c) + (g), number 90 (i) + (j), number 44 (d) + (d) and so on;
