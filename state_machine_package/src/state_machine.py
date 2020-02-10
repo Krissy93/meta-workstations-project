@@ -97,7 +97,7 @@ class State(smach.State):
         # between the theoretical position +- 0.01 radiants. This is a safety measure
         # because it is nearly impossible to reach the theoretical position requested
         # so an approximation is needed
-        if (msg.position >= self.trajectory.positions - 0.01) and (msg.position <= self.trajectory.positions + 0.01):
+        if (msg.position[0] >= self.trajectory.positions[1] - 0.01) and (msg.position[0] <= self.trajectory.positions[0] + 0.01):
         #print(self.trajectory.points[0].positions)
         #if (msg.position[0] == 888) and (msg.position[1] >= self.trajectory.points[0].positions[1] - 0.01) and (msg.position[1] <= self.trajectory.points[0].positions[1] + 0.01):
             # if the two positions are almost equal, it means that the robot
@@ -367,7 +367,7 @@ class Home(State):
     different states. New functionalities must be connected to this state to be accessed!
     It inherits common traits from the parent State class. """
 
-    def __init__(self, transitions=['tState0','tPointsDef', 'tLoop', 'tPickPlace', 'tJog', 'tSetVel'], input=['input', 'oldstate', 'velocity', 'jogstep'], output=['output', 'oldstate', 'velocity', 'jogstep']):
+    def __init__(self, transitions=['tState0', 'tSOP', 'tCOP', 'tJog', 'tSetVel'], input=['input', 'oldstate', 'velocity', 'jogstep'], output=['output', 'oldstate', 'velocity', 'jogstep']):
         State.__init__(self, transitions, input, output)
         self.statename = 'HOME STATE'
 
@@ -375,11 +375,10 @@ class Home(State):
         """ Method called at the startup of the state, to present the user the command list available. """
 
         rospy.loginfo(color.BOLD + color.PURPLE + '|           COMMAND LIST           |' + color.END)
-        #rospy.loginfo(color.BOLD + color.PURPLE + '|-5: GO TO POINTS DEFINITION STATE |' + color.END)
-        rospy.loginfo(color.BOLD + color.PURPLE + '| 1: GO TO LOOP STATE              |' + color.END)
-        rospy.loginfo(color.BOLD + color.PURPLE + '| 2: GO TO PICK AND PLACE STATE    |' + color.END)
+        rospy.loginfo(color.BOLD + color.PURPLE + '| 1: GO TO SOP BUILDING STATE      |' + color.END)
+        rospy.loginfo(color.BOLD + color.PURPLE + '| 2: GO TO COP BUILDING STATE      |' + color.END)
         rospy.loginfo(color.BOLD + color.PURPLE + '| 3: GO TO JOG STATE               |' + color.END)
-        rospy.loginfo(color.BOLD + color.PURPLE + '| 4: GO TO SET MOTOR SPEED STATE   |' + color.END)
+        rospy.loginfo(color.BOLD + color.PURPLE + '| 4: GO TO ROBOT SPEED STATE       |' + color.END)
         rospy.loginfo(color.BOLD + color.PURPLE + '|-2: CLOSE COMMUNICATION (STATE 0) |' + color.END)
 
     def execute(self, userdata):
@@ -402,7 +401,7 @@ class Home(State):
             # waits for the correct command according to the request number sent before
             self.sub = rospy.Subscriber(RESPONSE_TOPIC, commandResponse, self.stateCallback, queue_size = 1)
 
-            if self.nextstate == -5:
+            '''if self.nextstate == -5:
                 # chooses the point definition state
                 self.statename = 'POINTS DEFINITION'
                 self.confirm()
@@ -423,11 +422,11 @@ class Home(State):
                     # in this case the command has been deleted, thus it needs reprint the command list and wait
                     # for a new command to be insterted instead, after the updating.
                     self.listCommands()
-                    self.update('change_state')
+                    self.update('change_state')'''
 
-            elif self.nextstate == 1:
-                # chooses the loop state
-                self.statename = 'LOOP'
+            if self.nextstate == 1:
+                # chooses the pick and place state
+                self.statename = 'SOP'
                 self.confirm()
                 # asks the user to confirm the selection
 
@@ -437,7 +436,7 @@ class Home(State):
                     # of the state from when it comes from in "oldstate". After this, it performs the transition
                     userdata.output = self.request.request_number
                     userdata.oldstate = 'HOME STATE'
-                    return 'tLoop'
+                    return 'tSOP'
                 elif self.command == -2:
                     # the command given asks to exit the state, in this case closing the communication.
                     self.nextstate = -2
@@ -449,8 +448,8 @@ class Home(State):
                     self.update('change_state')
 
             elif self.nextstate == 2:
-                # chooses the pick and place state
-                self.statename = 'PICK AND PLACE'
+                # chooses the loop state
+                self.statename = 'COP'
                 self.confirm()
                 # asks the user to confirm the selection
 
@@ -460,7 +459,7 @@ class Home(State):
                     # of the state from when it comes from in "oldstate". After this, it performs the transition
                     userdata.output = self.request.request_number
                     userdata.oldstate = 'HOME STATE'
-                    return 'tPickPlace'
+                    return 'tCOP'
                 elif self.command == -2:
                     # the command given asks to exit the state, in this case closing the communication.
                     self.nextstate = -2
@@ -533,8 +532,9 @@ class Home(State):
         userdata.oldstate = 'HOME STATE'
         return 'tState0'
 
-########### POINTS DEFINITION ###########
+########### NOT USED: POINTS DEFINITION ###########
 
+'''
 class PointsDef(State):
     """ Points definition state. The only thing that happens here is that the corresponding
     file is opened and ready to be modified (keyboard inputs, not gestures).
@@ -563,16 +563,17 @@ class PointsDef(State):
         userdata.output = userdata.input
         userdata.oldstate = 'POINTS DEFINITION STATE'
         return 'tHome'
+'''
 
-########### LOOP STATES ###########
+########### COP STATES ###########
 
-class Loop(InstructionState):
+class COP(InstructionState):
     ''' Loop state. The operator selects the operation to be executed from a list of
     available operations, loads it into memory then says to the robot how many times it
     must execute the loop. It can be paused or stopped in the time between the sending of packets.
     It inherits common InstructionState methods. '''
 
-    def __init__(self, transitions=['tHome', 'tLRun'], input=['input', 'oldstate', 'velocity', 'jogstep'], output=['output', 'oldstate', 'velocity', 'jogstep', 'operations']):
+    def __init__(self, transitions=['tHome', 'tCOPRun'], input=['input', 'oldstate', 'velocity', 'jogstep'], output=['output', 'oldstate', 'velocity', 'jogstep', 'operations']):
         InstructionState.__init__(self, transitions, input, output)
 
     def listCommands(self):
@@ -660,7 +661,7 @@ class Loop(InstructionState):
 
     def execute(self, userdata):
         # when executed, initializes the variables calling the reset method
-        self.statename = 'LOOP STATE'
+        self.statename = 'COP STATE'
         self.reset()
         # the request number do not need to be updated here
         self.request.request_number = userdata.input
@@ -712,9 +713,9 @@ class Loop(InstructionState):
                 if self.command == 0:
                     rospy.loginfo(color.BOLD + color.RED + '-- MOVING TO ' + self.statename + ' --' + color.END)
                     userdata.output = self.request.request_number
-                    userdata.oldstate = 'LOOP STATE'
+                    userdata.oldstate = 'COP STATE'
                     userdata.operations = operation_list
-                    return 'tLRun'
+                    return 'tCOPRun'
                 elif self.command == -2:
                     # breaks
                     self.nextstate = -2
@@ -736,20 +737,20 @@ class Loop(InstructionState):
         self.statename = 'HOME STATE'
         rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
         userdata.output = self.request.request_number
-        userdata.oldstate = 'LOOP STATE'
+        userdata.oldstate = 'COP STATE'
         return 'tHome'
 
 
-class LoopRun(InstructionState):
+class COPRun(InstructionState):
     ''' Used to execute the given operations selected in the previous state.
     Useful in a separated state in order to debug it easily. '''
 
-    def __init__(self, transitions=['tLoop', 'tHome'], input=['input', 'oldstate', 'velocity', 'jogstep', 'operations'], output=['output', 'oldstate', 'velocity', 'jogstep']):
+    def __init__(self, transitions=['tCOP', 'tHome'], input=['input', 'oldstate', 'velocity', 'jogstep', 'operations'], output=['output', 'oldstate', 'velocity', 'jogstep']):
         InstructionState.__init__(self, transitions, input, output)
 
     def execute(self, userdata):
         # when executed, initializes the variables calling the reset method
-        self.statename = 'LAUNCH COMPOSED LOOP STATE'
+        self.statename = 'LAUNCH COP STATE'
         self.reset()
         # the request number do not need to be updated here
         self.request.request_number = userdata.input
@@ -868,12 +869,12 @@ class LoopRun(InstructionState):
         self.statename = 'HOME STATE'
         rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
         userdata.output = self.request.request_number
-        userdata.oldstate = 'LAUNCH COMPOSED LOOP STATE'
+        userdata.oldstate = 'LAUNCH COP STATE'
         return 'tHome'
 
 ########### PICK AND PLACE STATE ###########
 
-class PickPlace(InstructionState):
+class SOP(InstructionState):
     """ Pick and Place state. Allows the user to send to the robot some actions
     interactively, meaning that if no exit gesture is seen the robot waits for the next
     movement command. It inherits common traits from the parent InstructionState class. """
@@ -1000,7 +1001,7 @@ class PickPlace(InstructionState):
 
     def execute(self, userdata):
         # when executed, initializes the variables calling the reset method
-        self.statename = 'PICK AND PLACE STATE'
+        self.statename = 'SOP STATE'
         self.reset()
         # at the start of the method, initializes again the action list to ensure it is empty
         # needed because we simply append the actions to the list
@@ -1111,7 +1112,7 @@ class PickPlace(InstructionState):
         self.statename = 'HOME STATE'
         rospy.loginfo(color.BOLD + color.RED + '-- RETURNING TO ' + self.statename + ' --' + color.END)
         userdata.output = self.request.request_number
-        userdata.oldstate = 'PICK AND PLACE STATE'
+        userdata.oldstate = 'SOP STATE'
         return 'tHome'
 
 ########### JOG STATES ###########
@@ -1194,7 +1195,6 @@ class Jog(State):
         return 'tHome'
 
 
-'''CONTROLLA SE E' OK'''
 class JogRun(InstructionState):
     """ Run Jog State. This is the operative state where the user moves interactively
     the robot one joint at a time, telling it to increse or reduce its position.
@@ -1415,7 +1415,6 @@ class JogStepSize(State):
 
 ########### SET SYSTEM VELOCITY ###########
 
-''' CONTROLLA I VALORI DELLA VELOCITA' COME VENGONO SETTATI (0.9 o 90 ecc) '''
 class SetVel(State):
     """ State to set the joint velocity at system level. By doing this every movement packet
     will also set the correct value accordingly. It inherits common traits from the parent State class. """
@@ -1536,45 +1535,44 @@ def main():
                                     'velocity':'velocity',
                                     'jogstep':'jogstep'})
             smach.StateMachine.add('Home', Home(),
-                                    transitions={'tState0':'ReadyState',
-                                    'tPointsDef':'PointsDef', 'tLoop':'Loop',
-                                    'tPickPlace':'PickPlace', 'tJog':'Jog', 'tSetVel':'SetVel'},
+                                    transitions={'tState0':'ReadyState', 'tSOP':'SOP',
+                                    'tCOP':'COP', 'tJog':'Jog', 'tSetVel':'SetVel'},
                                     remapping={'input':'request_number',
                                     'output':'request_number',
                                     'oldstate':'oldstate',
                                     'velocity':'velocity',
                                     'jogstep':'jogstep'})
-            smach.StateMachine.add('PointsDef', PointsDef(),
+            # smach.StateMachine.add('PointsDef', PointsDef(),
+            #                         transitions={'tHome':'Home'},
+            #                         remapping={'input':'request_number',
+            #                         'output':'request_number',
+            #                         'oldstate':'oldstate',
+            #                         'velocity':'velocity',
+            #                         'jogstep':'jogstep'})
+            smach.StateMachine.add('SOP', SOP(),
                                     transitions={'tHome':'Home'},
                                     remapping={'input':'request_number',
                                     'output':'request_number',
                                     'oldstate':'oldstate',
                                     'velocity':'velocity',
                                     'jogstep':'jogstep'})
-            smach.StateMachine.add('Loop', Loop(),
+            smach.StateMachine.add('COP', COP(),
                                     transitions={'tHome':'Home',
-                                    'tLRun':'LoopRun'},
+                                    'tCOPRun':'COPRun'},
                                     remapping={'input':'request_number',
                                     'output':'request_number',
                                     'oldstate':'oldstate',
                                     'velocity':'velocity',
                                     'jogstep':'jogstep',
                                     'operations':'operations'})
-            smach.StateMachine.add('LoopRun', LoopRun(),
-                                    transitions={'tLoop':'Loop', 'tHome':'Home'},
+            smach.StateMachine.add('COPRun', COPRun(),
+                                    transitions={'tCOP':'COP', 'tHome':'Home'},
                                     remapping={'input':'request_number',
                                     'output':'request_number',
                                     'oldstate':'oldstate',
                                     'velocity':'velocity',
                                     'jogstep':'jogstep',
                                     'operations':'operations'})
-            smach.StateMachine.add('PickPlace', PickPlace(),
-                                    transitions={'tHome':'Home'},
-                                    remapping={'input':'request_number',
-                                    'output':'request_number',
-                                    'oldstate':'oldstate',
-                                    'velocity':'velocity',
-                                    'jogstep':'jogstep'})
             smach.StateMachine.add('Jog', Jog(),
                                     transitions={'tHome':'Home',
                                     'tJRun':'JogRun',
