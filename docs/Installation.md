@@ -93,7 +93,7 @@ If using a RealSense or other camera, install their dependencies (For the RealSe
   sudo apt-get update
   sudo apt-get upgrade
   sudo apt-get remove x264 libx264-dev
-  sudo apt-get install build-essential checkinstall cmake pkg-config yasm
+  sudo apt-get install checkinstall yasm
   sudo apt-get install git gfortran
   sudo apt-get install libjpeg8-dev libjasper-dev libpng12-dev
   sudo apt-get install libtiff5-dev
