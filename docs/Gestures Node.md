@@ -31,18 +31,18 @@ We filter out predictions as a safety measure, since Object Detectors are noisy 
 We defined a set of single-hand gestures as represented in the figure.
 
 <p align="center">
-  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/hands.png">
+  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/hands2.png">
 </p>
 
 Since every gesture can be performed with the right or the left hand, and some gestures get confused with each other by the detector, we developed a "command code" to improve the performances.
-This command code is based on the idea detailed in our paper: [Deep learning-based hand gesture recognition for collaborative robots](https://ieeexplore.ieee.org/abstract/document/8674634).
+This command code is based on the idea detailed in our papers: [Deep learning-based hand gesture recognition for collaborative robots](https://ieeexplore.ieee.org/abstract/document/8674634) and [Hand Gesture Recognition for Collaborative Workstations: A Smart Command System Prototype](https://link.springer.com/chapter/10.1007%2F978-3-030-30754-7_33).
 Basically, a valid gesture is composed by using **both hands at the same time**, allowing to create a more complex meaning.
 In this case we do not use an hand as the anchor, but dynamically compose instructions according to the meaning of each single-hand gesture.
 
 The meaning of the single-hand gestures is:
 - gestures from (a) to (i) represent **numbers from 1 to 9**;
-- gesture (j) is used as an interface command to **delete** the inserted instruction, allowing the user to re-enter the correct one;
-- gesture (k) represents both the **number 0** and the **confirmation command**;
+- gesture (k) is used as an interface command to **delete** the inserted instruction, allowing the user to re-enter the correct one;
+- gesture (j) represents both the **number 0** and the **confirmation command**;
 - gesture (l) has 4 variants, according to which hand is used and where the hand is pointing (right or left).
 These are used as **directional gestures** to represent the increment (if the hand points right) or decrement (if the hand points left) of the position of the selected joint during the **Jog Mode**;
 - gesture (m) represents the act to **interact with the system**. We use this gesture to access functionalities that request the user to open some file and modify it (using the keyboard);
@@ -54,17 +54,17 @@ Thus, the composed commands are of two types: **Commands** and **Instructions**.
 ### Commands
 Commands are statically defined and always represent the same meaning in the whole system.
 These are:
-- **CONFIRM** command: (k) + (k) gestures. It is used to confirm inserted commands/instructions and give the robot the signal to start or resume its movement;
-- **DELETE** command: (j) + (j) gestures. It is used as the interface command to delete the command/instruction inserted before and allow the user to enter the correct one;
+- **CONFIRM** command: (j) + (j) gestures. It is used to confirm inserted commands/instructions and give the robot the signal to start or resume its movement;
+- **DELETE** command: (k) + (k) gestures. It is used as the interface command to delete the command/instruction inserted before and allow the user to enter the correct one;
 - **EXIT** command: (n) gesture. It has the same meaning described above, since it's performed with both hand by default;
 - **PAUSE** command: (o) gesture. It has the same meaning described above, since it's performed with both hand by default;
 - **OPEN FILE** command: (m) gesture. It has the same meaning described above, since it's performed with both hand by default.
 
 ### Instructions
 Instructions are dynamically composed, thus allowing the user to create numbers or codes on-the-go. Some examples are:
-- **CREATE SINGLE DIGIT NUMBER:** (k) + (a-i) gestures. Numbers are calculated considering the left gesture as the first digit and the right gesture as the second.
+- **CREATE SINGLE DIGIT NUMBER:** (j) + (a-i) gestures. Numbers are calculated considering the left gesture as the first digit and the right gesture as the second.
 In this case the output is 0 + N = N;
-- **CREATE TWO DIGIT NUMBER:** (a-i) + (a-i + k) gestures. Examples are: number 37 (c) + (g), number 90 (i) + (k), number 44 (d) + (d) and so on;
+- **CREATE TWO DIGIT NUMBER:** (a-i) + (a-i + j) gestures. Examples are: number 37 (c) + (g), number 90 (i) + (j), number 44 (d) + (d) and so on;
 - **CREATE JOG INSTRUCTION:** Jog instructions are composed in a different way.
 The numerical code is **100[Joint][1/0/-1]**. The first "100" is added by the system to distinguish the command from others.
 The joint number is defined using a numerical gesture in the range from **1 to 9**. The 0 joint does not exists, and is used as an initialization value.
