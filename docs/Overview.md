@@ -1,9 +1,9 @@
 # Overview of the system
-The system is composed of several nodes that perform some core functionality. The nodes talk with each other by sending messages on specific topics.
-The developed structure is detailed in Fig. 1.
+MEGURU is composed of several nodes that perform core functionalities. The nodes talk with each other by sending messages on specific topics.
+The developed structure up until now is detailed in Fig. 1.
 
 <p align="center">
-  <img height="400" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/system_overview3.png">
+  <img height="400" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/sys_overview.png">
 </p>
 
 ## State Machine Node
@@ -11,13 +11,13 @@ The main node is the **State Machine Node**, which contains the definition of th
 For now, a set of simple functionalities (Fig. 2) has been developed but new robot functionalities can be easily added to the state machine by adding a new State to the `state_machine.py` core file.
 
 <p align="center">
-  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/statemachine2.png">
+  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/state_machine.png">
 </p>
 
-When launched, the State Machine enters an initial state called **Ready State**. From here, users can decide to quit the program or start communicating with the robot. If the latter is chosen, the State Machine moves to another state called **Home State**, from which users can decide which functionality they want to use.
-
-The functionalities developed so far are:
-- **Loop definition State:** This state is accessed by performing the 0 + 1 numerical gesture. In this state users can define a "loop" operation that the robot must perform a given number of times. To do so, the user must select one or more Operation files that are loaded automatically at the start of this state from the corresponding subdirectory of the package (i. e. `/state_machine_package/operations`). When an Operation file is selected, the user tells the robot how many repetitions of the last Operation file it must execute before proceeding to the next Operation file.
+When launched, the State Machine is in the initial state, called **Ready State**. In this state, the State Machine waits for the user Commands and can move to (i) the **EXIT** State (where the program quits) or (ii) to the **Home State**. From this state, the user can access to one out of the following four states: 
+1. **SOPs Building State (SB):** this state is accessed by performing 0 + 1 gestures. This is the core state of the State Machine. Here, the user selects Actions from the Action library and, if requested by the Action, selects Points from the Point File. Each single Action results in the corresponding robot task and is immediately executed by the robot. Complex tasks are implemented as SOPs built by means of a user-machine collaboration that combines different Actions and saves them in the corresponding Operation file;
+2. **COPs Building State (CB):** this state is accessed by performing 0 + 2 gestures. In this state COPs are built. To this aim, the State Machine enters in a loop where the user can select, for each single SOP, the corresponding Operation file and the number of iterations that SOP must be repeated; then, the State Machine moves to the COPs Launch State (CL) where each single Action of the COP is sent to the robot until the whole sequence is performed. 
+  To do so, the user must select one or more Operation files that are loaded automatically at the start of this state from the corresponding subdirectory of the package (e. g. `/state_machine_package/operations`). When an Operation file is selected, the user tells the robot how many repetitions of the last Operation file it must execute before proceeding to the next Operation file.
   For example:
   ```
   Operation 1: /operations/First.py
@@ -55,10 +55,9 @@ The functionalities developed so far are:
   Operation 1
   Operation 2
   ```
-  After the definition of the Operation to execute, the State Machine automatically moves to the **Launch loop operation State** which sends one action at a time to the robot. In this way, the execution can be paused by the user at any time by performing the "PAUSE" gesture, afterwards it can be resumed by performing the "CONFIRM" gesture. It is also possible to stop the execution completely by performing the "EXIT" gesture at any time: in this case the State Machine will return to the Initial State;
-- **Pick & Place State:** This state is accessed by performing the 0 + 2 numerical gesture. Users interactively choose an action from the list of actions and, if required by the action, a point from the list of points. Upon selection, the command is sent to the robot and after its execution the system asks the user if it wants to select another action to be performed or if it wants to end the procedure, in this case going back to the Home State. Each Action performed is stored into memory, and the user can decide to save the whole set of actions as an Operation file upon exiting the State;
-- **Jog State:** It is the state where users can change the robot joint positions easily. It is accessed by performing the 0 + 3 numerical gesture, and it has two sub-states: the first one ("OPEN FILE" gesture) allows users to change the robot step size by modifiying the related file, while the second one ("CONFIRM" gesture) allows users to launch the Jog Mode. In Jog Mode each joint is moved one at a time of the Jog Step Size, and users can decide to: move the joint increasing its position (Joint + Right Direction gesture), move the joint decreasing its position (Joint + Left Direction gesture) or stop the joint right there (Joint + Five gesture). To save the achieved position, users can perform the "CONFIRM" gesture in order to append its joint coordinates read from the `/joint_states` topic to the `QPoints` file;
-- **Set System Velocity State:** This state is accessed by performing the 0 + 4 gesture. Users can define the robot velocity system-wise by performing the numerical gesture related to the percentage of speed they want. For example, to set the robot velocity at 80% users must perform the 0 + 8 gesture.
+The execution of each Action can be paused by the user using the **PAUSE** gesture and resumed by performing the **CONFIRM** gesture. It is also possible to stop the execution completely by performing the **EXIT** gesture at any time: in this case the State Machine moves back to the Ready State;
+3. **Jog State (J):** this state is accessed by performing 0 + 3 gestures. This is a service state designed to help users to perform maintenance checks on the robot motors and to set specific positions of the robot according to their needs. It is divided in two states: the former is the **Jog Mode State (JM)** (accessed by performing the **CONFIRM** gesture), where operators can increment or decrement the joint position of the robot according to the joint selected using the corresponding gesture, or stop the joint in the current position (**Joint + Right Direction/Left Direction/Five gesture** respectively, users can also save a certain position by performing the **CONFIRM** command without exiting or pausing the state: this will append the new joint coordinates read from the `/joint_states` topic to the `QPoints` file); the latter is the **Jog Step State (JS)** (accessed by performing the **OPEN FILE** gesture), where operators can increase or decrease the default Jog step size by changing the parameter in the corresponding file;
+4. **Robot Speed State (RS):** This state is accessed by performing the 0 + 4 gesture. In this state, the movement speed of the robot can be modified. The default speed is set to 100%, but users can decrease it by performing the gesture which correspond to a lower percentage of the total speed of the robot (e. g. to obtain the 80% of the total speed, the user must perform the instruction which corresponds to number 8, thus 0 + 8). It is worth noting that the specified speed is automatically set upon sending a new robot movement message, without interfering with the proprietary controller settings, by setting the corresponding parameter of the message.
 
 ## Gesture Recognition Node
 To use the State Machine the user must give it commands in two ways:
@@ -71,7 +70,7 @@ To use the State Machine the user must give it commands in two ways:
 To send the operative instruction to the robot and make it move, the State Machine sends points coordinates to the **Robot Driver** using the [JointTrajectory message](http://docs.ros.org/melodic/api/trajectory_msgs/html/msg/JointTrajectory.html), which is published in the `/joint_path_command` topic.
 Keep in mind that if you want the robot to execute a complex trajectory composed of multiple robot positions, it is best to send each position individually to be able to stop or pause the robot between each message.
 Otherwise, the robot receives the whole list of positions (defines as a [JointTrajectoryPoints message](http://docs.ros.org/melodic/api/trajectory_msgs/html/msg/JointTrajectoryPoint.html)) and executes them in sequence.
-It cannot be stopped or paused from the State Machine, but only from traditional command methods (Teach pad, Robot proprietary software etc...).
+It cannot be stopped or paused from the State Machine, but only from traditional command methods (Teach pendant, Robot proprietary software etc...).
 
 Robot Drivers are robot-dependant. A list of available drivers can be found [here](http://wiki.ros.org/Industrial/supported_hardware).
 If the driver for the specific robot you have is not in the list, you have to write your own!
