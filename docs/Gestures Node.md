@@ -41,8 +41,8 @@ In this case we do not use an hand as the anchor, but dynamically compose instru
 
 The meaning of the single-hand gestures is:
 - gestures from (a) to (i) represent **numbers from 1 to 9**;
-- gesture (k) is used as an interface command to **delete** the inserted instruction, allowing the user to re-enter the correct one;
 - gesture (j) represents both the **number 0** and the **confirmation command**;
+- gesture (k) is used as an interface command to **delete** the inserted instruction, allowing the user to re-enter the correct one;
 - gesture (l) has 4 variants, according to which hand is used and where the hand is pointing (right or left).
 These are used as **directional gestures** to represent the increment (if the hand points right) or decrement (if the hand points left) of the position of the selected joint during the **Jog Mode**;
 - gesture (m) represents the act to **interact with the system**. We use this gesture to access functionalities that request the user to open some file and modify it (using the keyboard);
