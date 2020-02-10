@@ -17,44 +17,44 @@ For now, a set of simple functionalities (Fig. 2) has been developed but new rob
 When launched, the State Machine is in the initial state, called **Ready State**. In this state, the State Machine waits for the user Commands and can move to (i) the **EXIT** State (where the program quits) or (ii) to the **Home State**. From this state, the user can access to one out of the following four states: 
 1. **SOPs Building State (SB):** this state is accessed by performing 0 + 1 gestures. This is the core state of the State Machine. Here, the user selects Actions from the Action library and, if requested by the Action, selects Points from the Point File. Each single Action results in the corresponding robot task and is immediately executed by the robot. Complex tasks are implemented as SOPs built by means of a user-machine collaboration that combines different Actions and saves them in the corresponding Operation file;
 2. **COPs Building State (CB):** this state is accessed by performing 0 + 2 gestures. In this state COPs are built. To this aim, the State Machine enters in a loop where the user can select, for each single SOP, the corresponding Operation file and the number of iterations that SOP must be repeated; then, the State Machine moves to the COPs Launch State (CL) where each single Action of the COP is sent to the robot until the whole sequence is performed. To do so, the user must select one or more Operation files that are loaded automatically at the start of this state from the corresponding subdirectory of the package (e. g. `/state_machine_package/operations`). When an Operation file is selected, the user tells the robot how many repetitions of the last Operation file it must execute before proceeding to the next Operation file.
-For example:
-```
-Operation 1: /operations/First.py
-Repetitions: 3
-Operation 2: /operations/Second.py
-Repetitions: 2
-```
-The final schedule of operations for the robot are:
-```
-Operation 1
-Operation 1
-Operation 1
-Operation 2
-Operation 2
-```
-It is also possible to define the whole Operation as a number of Operation files and define a loop value for the whole Operation:
-```
-Operation 1: /operations/First.py
-Repetitions: 1
-Operation 2: /operations/Second.py
-Repetitions: 1
-Global Repetitions: 4
-```
-In this case, the schedule is:
-```
-Operation 1
-Operation 2
+    For example:
+    ```
+    Operation 1: /operations/First.py
+    Repetitions: 3
+    Operation 2: /operations/Second.py
+    Repetitions: 2
+    ```
+    The final schedule of operations for the robot are:
+    ```
+    Operation 1
+    Operation 1
+    Operation 1
+    Operation 2
+    Operation 2
+    ```
+    It is also possible to define the whole Operation as a number of Operation files and define a loop value for the whole Operation:
+    ```
+    Operation 1: /operations/First.py
+    Repetitions: 1
+    Operation 2: /operations/Second.py
+    Repetitions: 1
+    Global Repetitions: 4
+    ```
+    In this case, the schedule is:
+    ```
+    Operation 1
+    Operation 2
 
-Operation 1
-Operation 2
+    Operation 1
+    Operation 2
 
-Operation 1
-Operation 2
+    Operation 1
+    Operation 2
 
-Operation 1
-Operation 2
-```
-The execution of each Action can be paused by the user using the **PAUSE** gesture and resumed by performing the **CONFIRM** gesture. It is also possible to stop the execution completely by performing the **EXIT** gesture at any time: in this case the State Machine moves back to the Ready State;
+    Operation 1
+    Operation 2
+    ```
+    The execution of each Action can be paused by the user using the **PAUSE** gesture and resumed by performing the **CONFIRM** gesture. It is also possible to stop the execution completely by performing the **EXIT** gesture at any time: in this case the State Machine moves back to the Ready State;
 3. **Jog State (J):** this state is accessed by performing 0 + 3 gestures. This is a service state designed to help users to perform maintenance checks on the robot motors and to set specific positions of the robot according to their needs. It is divided in two states: the former is the **Jog Mode State (JM)** (accessed by performing the **CONFIRM** gesture), where operators can increment or decrement the joint position of the robot according to the joint selected using the corresponding gesture, or stop the joint in the current position (**Joint + Right Direction/Left Direction/Five gesture** respectively, users can also save a certain position by performing the **CONFIRM** command without exiting or pausing the state: this will append the new joint coordinates read from the `/joint_states` topic to the `QPoints` file); the latter is the **Jog Step State (JS)** (accessed by performing the **OPEN FILE** gesture), where operators can increase or decrease the default Jog step size by changing the parameter in the corresponding file;
 4. **Robot Speed State (RS):** This state is accessed by performing the 0 + 4 gesture. In this state, the movement speed of the robot can be modified. The default speed is set to 100%, but users can decrease it by performing the gesture which correspond to a lower percentage of the total speed of the robot (e. g. to obtain the 80% of the total speed, the user must perform the instruction which corresponds to number 8, thus 0 + 8). It is worth noting that the specified speed is automatically set upon sending a new robot movement message, without interfering with the proprietary controller settings, by setting the corresponding parameter of the message.
 
