@@ -3,14 +3,10 @@ At the present time, the software is not programmed to automatically understand 
 Every instruction given to the robot must correspond to an operation already written down somewhere in an "hard-code" way.
 This basically is what users usually do when programming a robot for a specific task: they write down in its code what it has to do according to the set-up where it is mounted on.
 
-Because of this, we defined three main types of hard-code building blocks definitions (Fig. 1):
-- **POINTS:** these are the base blocks that compose MEGURU programming structure. They represent the positions of the robot end effector in the current reference system, expressed by (i) cartesian coordinates or by (ii) Joints position. Points are collected by the user either using ROS or the robot proprietary software, and are stored in an ordered list, thereafter called “Points file” (Fig. 1a);
-- **ACTIONS:** these are parametric functions that represent a simple action of the robot (e. g. opening and closing a gripper or moving the robot to a certain point). A dedicated Python library based on ROS communication functionalities has been developed to (i) guarantee the independency of the Actions from the robot manufacturer platform and (ii) allow the user to easily define different Actions according to the application needs (pink blocks in Fig. 1b);
-- **OPERATIONS:** by using MEGURU, users can build two types of Operations: **Simple Operations (SOPs)**, obtained by combining different Actions, and **Combined Operations (COPs)**, obtained by joining multiple SOPs. As a result, MEGURU allows users to reconfigure the robot tasks in reduced times and to adapt the robot to a mixed production minimizing production downtime. An example of a SOP is shown in Fig. 1b, with respect to a Pick&Place task, while examples of the resulting COPs are shown in Fig. 1c and Fig. 1d.
-
-<p align="center">
-  <img height="600" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/intro.png">
-</p>
+Because of this, we defined three main types of hard-code building blocks definitions:
+- **POINTS:** these are the base blocks that compose MEGURU programming structure. They represent the positions of the robot end effector in the current reference system, expressed by (i) cartesian coordinates or by (ii) Joints position. Points are collected by the user either using ROS or the robot proprietary software, and are stored in an ordered list, thereafter called “Points file”;
+- **ACTIONS:** these are parametric functions that represent a simple action of the robot (e. g. opening and closing a gripper or moving the robot to a certain point). A dedicated Python library based on ROS communication functionalities has been developed to (i) guarantee the independency of the Actions from the robot manufacturer platform and (ii) allow the user to easily define different Actions according to the application needs;
+- **OPERATIONS:** by using MEGURU, users can build two types of Operations: **Simple Operations (SOPs)**, obtained by combining different Actions, and **Combined Operations (COPs)**, obtained by joining multiple SOPs. As a result, MEGURU allows users to reconfigure the robot tasks in reduced times and to adapt the robot to a mixed production minimizing production downtime.
 
 ## How to define Points
 Users move the robot in the space by using their preferred method (e. g. manual guidance or ROS interfaces or Teach Pendant, etc.), then save the current position in both Cartesian coordinates and Joint states. Right now, the software does not this automatically, thus points must be written manually in certain .txt files.
