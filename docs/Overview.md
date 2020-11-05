@@ -1,18 +1,10 @@
 # Overview of the system
 MEGURU is composed of several nodes that perform core functionalities. The nodes talk with each other by sending messages on specific topics.
-The developed structure up until now is detailed in Fig. 1.
-
-<p align="center">
-  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/sys_overview.png">
-</p>
+A detailed overview of the system can be found in our paper: check it out to learn more about it and about the experimental validation carried out!
 
 ## State Machine Node
 The main node is the **State Machine Node**, which contains the definition of the basic state machine used to command the robot.
-For now, a set of simple functionalities (Fig. 2) has been developed but new robot functionalities can be easily added to the state machine by adding a new State to the `state_machine.py` core file.
-
-<p align="center">
-  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/state_machine.png">
-</p>
+For now, a set of simple functionalities has been developed but new robot functionalities can be easily added to the state machine by adding a new State to the `state_machine.py` core file.
 
 When launched, the State Machine is in the initial state, called **Ready State**. In this state, the State Machine waits for the user Commands and can move to (i) the **EXIT** State (where the program quits) or (ii) to the **Home State**. From this state, the user can access to one out of the following four states: 
 1. **SOPs Building State (SB):** this state is accessed by performing 0 + 1 gestures. This is the core state of the State Machine. Here, the user selects Actions from the Action library and, if requested by the Action, selects Points from the Point File. Each single Action results in the corresponding robot task and is immediately executed by the robot. Complex tasks are implemented as SOPs built by means of a user-machine collaboration that combines different Actions and saves them in the corresponding Operation file;
