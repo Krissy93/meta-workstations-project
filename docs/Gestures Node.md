@@ -29,11 +29,7 @@ We filter out predictions as a safety measure, since Object Detectors are noisy 
 - if the pair survived the filtering, we store its numerical command value in a vector. If this vector is filled up with the same unique numerical values up to a certain threshold (good values are from 7 to 10), the composed gesture is valid and is written in the `/command_response` topic. Basically this assures that the same gesture is read from 7 to 10 times consecutively without a wrong gesture reading in-between.
 
 ## Gestures
-We defined a set of single-hand gestures as represented in the figure.
-
-<p align="center">
-  <img src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/hands2.png">
-</p>
+We defined a set of single-hand gestures as represented in figure XX of our paper.
 
 Since every gesture can be performed with the right or the left hand, and some gestures get confused with each other by the detector, we developed a "command code" to improve the performances.
 This command code is based on the idea detailed in our papers: [Deep learning-based hand gesture recognition for collaborative robots](https://ieeexplore.ieee.org/abstract/document/8674634) and [Hand Gesture Recognition for Collaborative Workstations: A Smart Command System Prototype](https://link.springer.com/chapter/10.1007%2F978-3-030-30754-7_33).
@@ -76,7 +72,11 @@ The final digit is defined according to the other hand gesture, that can be one 
 
 ### Adding custom gestures
 If you want to add some other gestures defined by yourself, you can perform a fine-tuning of our model adding to the dataset your custom gestures too.
-Download our model and follow the guidelines of the [TensorFlow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection) to find out the correct steps. If you need our dataset too, please contact us directly.
+Download our model and follow the guidelines of the [TensorFlow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection) to find out the correct steps. You can find our dataset here and, if you use it for your research, please cite it:
+
+```
+ref
+```
 
 Other models can also be used: simply train your own (even in different frameworks if you prefer), froze them and load them in the code.
 
