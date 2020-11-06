@@ -8,8 +8,23 @@ Welcome to the repository of MEGURU (**ME**ta-collaborative **G**est**U**re-base
 The project aims at developing a ROS-based structure to interact with both Industrial Robots and Collaborative Robots using smart modules. The system is an open source alternative to traditional robot programming methods, and requires little training to be used effectively.
 
 If you use this code for your research or find it useful, please cite it:
+
 ```
-@InProceedings{10.1007/978-3-030-30754-7_33,
+@article{meguru2021,
+author = "Cristina Nuzzi and Simone Pasinetti and Roberto Pagani and Stefano Ghidini and Manuel Beschi and Gabriele Coffetti and Giovanna Sansoni",
+title = "MEGURU: a gesture-based robot program builder for Meta-Collaborative workstations",
+journal = "Robotics and Computer-Integrated Manufacturing",
+volume = "68",
+pages = "102085",
+year = "2021",
+issn = "0736-5845",
+doi = "https://doi.org/10.1016/j.rcim.2020.102085",
+url = "http://www.sciencedirect.com/science/article/pii/S0736584520302957"
+}
+```
+
+```
+@inproceedings{metacollaborative2019,
 author="Nuzzi, Cristina and Pasinetti, Simone and Pagani, Roberto and Docchio, Franco and Sansoni, Giovanna",
 editor="Cristani, Marco and Prati, Andrea and Lanz, Oswald and Messelodi, Stefano and Sebe, Nicu",
 title="Hand Gesture Recognition for Collaborative Workstations: A Smart Command System Prototype",
@@ -18,6 +33,7 @@ year="2019",
 publisher="Springer International Publishing",
 address="Cham",
 pages="332--342",
+doi="10.1007/978-3-030-30754-7_33"
 isbn="978-3-030-30754-7"}
 ```
 
