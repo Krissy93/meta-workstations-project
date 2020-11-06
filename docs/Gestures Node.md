@@ -29,7 +29,7 @@ We filter out predictions as a safety measure, since Object Detectors are noisy 
 - if the pair survived the filtering, we store its numerical command value in a vector. If this vector is filled up with the same unique numerical values up to a certain threshold (good values are from 7 to 10), the composed gesture is valid and is written in the `/command_response` topic. Basically this assures that the same gesture is read from 7 to 10 times consecutively without a wrong gesture reading in-between.
 
 ## Gestures
-We defined a set of single-hand gestures as represented in figure XX of our paper.
+We defined a set of single-hand gestures as represented in figure 2 of [our paper](https://doi.org/10.1016/j.rcim.2020.102085).
 
 Since every gesture can be performed with the right or the left hand, and some gestures get confused with each other by the detector, we developed a "command code" to improve the performances.
 This command code is based on the idea detailed in our papers: [Deep learning-based hand gesture recognition for collaborative robots](https://ieeexplore.ieee.org/abstract/document/8674634) and [Hand Gesture Recognition for Collaborative Workstations: A Smart Command System Prototype](https://link.springer.com/chapter/10.1007%2F978-3-030-30754-7_33).
