@@ -1,6 +1,6 @@
 # Overview of the system
 MEGURU is composed of several nodes that perform core functionalities. The nodes talk with each other by sending messages on specific topics.
-A detailed overview of the system can be found in our paper: check it out to learn more about it and about the experimental validation carried out!
+A detailed overview of the system can be found in [our paper](https://doi.org/10.1016/j.rcim.2020.102085): check it out to learn more about it and about the experimental validation carried out!
 
 ## State Machine Node
 The main node is the **State Machine Node**, which contains the definition of the basic state machine used to command the robot.
