@@ -11,7 +11,7 @@ If you use this code for your research or find it useful, please cite it:
 
 ```
 @article{meguru2021,
-author = "Cristina Nuzzi and Simone Pasinetti and Roberto Pagani and Stefano Ghidini and Manuel Beschi and Gabriele Coffetti and Giovanna Sansoni",
+author = "Nuzzi, Cristina and Pasinetti, Simone and Pagani, Roberto and Ghidini, Stefano and Beschi, Manuel and Coffetti, Gabriele and Sansoni, Giovanna",
 title = "MEGURU: a gesture-based robot program builder for Meta-Collaborative workstations",
 journal = "Robotics and Computer-Integrated Manufacturing",
 volume = "68",
