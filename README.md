@@ -39,8 +39,6 @@ isbn="978-3-030-30754-7"}
 
 ## Maintainers
 - Cristina Nuzzi, [Krissy93](https://github.com/Krissy93)
-- Stefano Ghidini, [stefanoghidini](https://github.com/stefanoghidini)
-- Roberto Pagani, [Roby-Pagani](https://github.com/Roby-Pagani)
 
 ## Table of Contents
 - [Installation instructions](https://github.com/Krissy93/meta-workstations-project/blob/master/docs/Installation.md)
