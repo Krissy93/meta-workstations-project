@@ -72,10 +72,19 @@ The final digit is defined according to the other hand gesture, that can be one 
 
 ### Adding custom gestures
 If you want to add some other gestures defined by yourself, you can perform a fine-tuning of our model adding to the dataset your custom gestures too.
-Download our model and follow the guidelines of the [TensorFlow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection) to find out the correct steps. You can find our dataset here and, if you use it for your research, please cite it:
+Download our model and follow the guidelines of the [TensorFlow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection) to find out the correct steps. You can find our dataset [here](https://data.mendeley.com/datasets/ndrczc35bt/2) and, if you use it for your research, please cite it:
 
 ```
-ref
+@article{HANDS_dataset,
+title = {HANDS: an RGB-D dataset of static hand-gestures for human-robot interaction},
+journal = {Data in Brief},
+volume = {35},
+pages = {106791},
+year = {2021},
+issn = {2352-3409},
+doi = {https://doi.org/10.1016/j.dib.2021.106791},
+url = {https://www.sciencedirect.com/science/article/pii/S2352340921000755},
+author = {Cristina Nuzzi and Simone Pasinetti and Roberto Pagani and Gabriele Coffetti and Giovanna Sansoni}}
 ```
 
 Other models can also be used: simply train your own (even in different frameworks if you prefer), froze them and load them in the code.
