@@ -1,5 +1,5 @@
 # MEGURU Project Repository
-Welcome to the repository of MEGURU (**ME**ta-collaborative **G**est**U**re-based **R**obot program b**U**ilder) Project of Vis4Mechs, University of Brescia, Italy!<br>
+Welcome to the repository of MEGURU (**ME**ta-collaborative **G**est**U**re-based **R**obot program b**U**ilder) Project of MMTLab, University of Brescia, Italy!<br>
 
 <p align="center">
   <img height="400" src="https://github.com/Krissy93/meta-workstations-project/blob/master/images/MEGLOGO.png">
